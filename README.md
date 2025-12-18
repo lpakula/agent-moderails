@@ -6,9 +6,9 @@
 
 **Plan Mode on steroids** — structured agent workflow with persistent memory.
 
-Inspired by the [RIPPER-5 protocol](https://forum.cursor.com/t/i-created-an-amazing-mode-called-riper-5-mode-fixes-claude-3-7-drastically/65516).
+Inspired by the [RIPER-5 protocol](https://forum.cursor.com/t/i-created-an-amazing-mode-called-riper-5-mode-fixes-claude-3-7-drastically/65516).
 
-> **Not for vibe coding.** ModeRails turns a coding agent into a collaborator — one that works *with* you, not *for* you. Take full advantage of AI-assisted development while staying in complete control. The protocol encourages you to understand every decision, learn along the way, and own your codebase.
+> **Not for vibe coding.** ModeRails makes your coding agent a collaborator — working *with* you, not just *for* you. Take full advantage of AI-assisted development while staying in complete control. The protocol encourages you to understand every decision, learn along the way, and own your codebase.
 
 ---
 
@@ -25,7 +25,7 @@ Most AI coding agents fail not because they're weak, but because they work witho
 
 This works for tiny prompts — but breaks down for real projects.
 
-**moderails fixes this** by giving the agent:
+**ModeRails fixes this** by giving the agent:
 - **Explicit modes** with clear boundaries
 - **Persistent task memory** across sessions
 - **Enforced rules** — research can't write code, execute can't redesign
@@ -50,7 +50,8 @@ Modes define clear boundaries — no skipping ahead, no mixing phases.
 
 **Optional:**  
 **💡 Brainstorm** — Explore alternative approaches  
-**❌ Close** — Abandon task and reset changes
+**❌ Abort** — Delete task and reset changes  
+**📦 Archive** — Convert completed epic to context file
 
 ---
 
@@ -77,16 +78,17 @@ This creates the following structure:
 my-project/
 ├── .cursor/commands/moderails.md ✨
 ├── .claude/commands/moderails.md ✨
-└── moderails/
-    ├── config.json ⚙️
-    ├── moderails.db 💾
-    ├── tasks/ 📝
-    │   └── epic-name/
-    │       └── task-name.md
-    └── context/ 📚
-        ├── project-overview.md 📌
-        └── tag-name/ 🏷️
-            └── guide.md
+└── agent/
+    └── moderails/
+        ├── config.json ⚙️
+        ├── moderails.db 💾
+        ├── tasks/ 📝
+        │   └── epic-name/
+        │       └── task-name.md
+        └── context/ 📚
+            ├── project-overview.md 📌
+            └── tag-name/ 🏷️
+                └── guide.md
 ```
 
 ✨ **Init command** — triggers the protocol in your editor  
@@ -126,7 +128,7 @@ Then, specify your task:
 - If status is `todo` → start with `#research`
 - If status is `in-progress` → continue with `#execute`
 
-> 🔀 **Git Branch**: Epic name = branch name. To avoid conflicts, start new tasks from a clean `main` branch, or checkout to the epic branch before continuing existing work. The protocol enforces this automatically — it creates/switches branches for you.
+> 💬 **Natural Language**: You can also use natural language instead of flags. Just describe what you want to work on, and the agent will help you create or select the right task. For example: *"I want to work on adding user authentication"* or *"Continue with the payment integration task"*.
 
 ### 2. 🔍 Research
 
@@ -162,6 +164,8 @@ The agent breaks down the work into atomic TODO items in the task file. Review a
 
 Implement TODO items one by one. Mark each item complete `[x]` in the task file.
 
+> Type `--no-confirmation` to work through all TODOs without stopping for confirmation between items.
+
 ### 6. ✅ Complete
 
 ```
@@ -170,10 +174,18 @@ Implement TODO items one by one. Mark each item complete `[x]` in the task file.
 
 Mark task as completed, commit changes with conventional commit message, store git hash.
 
-### 7. ❌ Close (optional)
+### 7. 📦 Archive (optional)
 
 ```
-#close
+#archive
+```
+
+Convert completed epic into a reusable context file. The epic summary becomes permanent project knowledge, automatically loaded for future tasks with matching tags. Deletes the epic after archiving.
+
+### 8. ❌ Abort (optional)
+
+```
+#abort
 ```
 
 Abandon task at any point. Permanently deletes the task and resets all git changes.
@@ -184,7 +196,7 @@ When you start or continue a task, the following context is automatically loaded
 
 ### 1. Epic Summary
 
-What's already been done in this epic — completed task summaries in chronological order and git diff from main.
+What's already been done in this epic — completed task summaries in chronological order and code changes from each completed task's commit.
 
 ### 2. Context Files
 
@@ -218,9 +230,24 @@ moderails task delete --task <task> --confirm
 
 # Epic management
 moderails epic summary --name <epic>
+moderails epic summary --name <epic> --short  
 moderails epic update --name <epic> --tags "..."
 moderails epic delete --name <epic> --confirm
 ```
+
+## ⚙️ Configuration
+
+ModeRails uses `config.json` to store configuration settings. It's created automatically during `moderails init`.
+
+### Base Directory
+
+By default, moderails creates `agent/moderails/` structure. You can customize the base directory:
+
+```bash
+moderails init --base-dir ai      # Creates ai/moderails/
+```
+
+> **Note:** Dot-prefixed directories (like `.ai`) are not allowed as they are protected by editors/agents.
 
 ## 🛠️ Development
 

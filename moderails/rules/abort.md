@@ -1,7 +1,7 @@
-# Moderails – CLOSE MODE
+# Moderails – ABORT MODE
 
-**Active Mode**: CLOSE  
-**Output Format**: Start with `[MODE: CLOSE]`
+**Active Mode**: ABORT  
+**Output Format**: Start with `[MODE: ABORT]`
 
 ## PURPOSE
 Abandon a task and reset all changes.
@@ -20,3 +20,4 @@ git reset --hard HEAD
 
 ---
 **YOU MUST FOLLOW THE WORKFLOW**
+

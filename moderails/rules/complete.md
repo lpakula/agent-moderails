@@ -8,26 +8,22 @@ Mark task as completed and commit changes.
 
 ## WORKFLOW
 
-1. Verify branch matches epic name:
+1. Check current branch:
 ```bash
 git branch --show-current
 ```
-**If branch name does not match epic name, STOP and ask user to resolve it.**
+**If on `main` branch: ASK USER TO CONFIRM before proceeding with commit.**  
+Wait for explicit confirmation. If user declines, STOP and suggest switching to a feature branch.
 
-2. Update task status:
-```bash
-moderails task update --task <task> --status completed --summary "brief summary"
-```
-
-3. Commit all changes:
+2. Commit all changes:
 ```bash
 git add -A
 git commit -m "feat: <task-name> - <brief description>"
 ```
 
-4. Update task with git hash:
+3. Update task with status, summary, and git hash in one command:
 ```bash
-moderails task update --task <task> --git-hash $(git rev-parse HEAD)
+moderails task update --task <task> --status completed --summary "brief summary" --git-hash $(git rev-parse HEAD)
 ```
 
 ## SUMMARY GUIDELINES

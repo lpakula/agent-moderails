@@ -1,7 +1,6 @@
 """CLI for moderails - structured agent workflow with persistent memory."""
 
 import json
-import subprocess
 from pathlib import Path
 from typing import Optional
 
@@ -9,7 +8,7 @@ import click
 
 from .db.database import find_db_path, get_session, init_db
 from .db.models import TaskStatus
-from .rules import get_full_protocol, get_rule
+from .rules import get_rule
 from .services import ContextService, EpicService, TaskService
 
 
@@ -28,55 +27,6 @@ def get_services(db_path: Optional[Path] = None):
         "epic": EpicService(session),
         "context": ContextService(moderails_dir),
     }
-
-
-def get_current_branch() -> Optional[str]:
-    """Get current git branch name."""
-    result = subprocess.run(
-        ["git", "branch", "--show-current"],
-        capture_output=True, text=True
-    )
-    return result.stdout.strip() if result.returncode == 0 else None
-
-
-def branch_exists(branch: str) -> bool:
-    """Check if a git branch exists."""
-    result = subprocess.run(
-        ["git", "rev-parse", "--verify", branch],
-        capture_output=True, text=True
-    )
-    return result.returncode == 0
-
-
-def checkout_epic_branch(epic_name: str) -> bool:
-    """Checkout to epic branch, creating from latest main if needed."""
-    current = get_current_branch()
-    
-    if current == epic_name:
-        click.echo(f"🔀 Already on branch: {epic_name}")
-        return True
-    
-    if branch_exists(epic_name):
-        # Switch to existing branch
-        result = subprocess.run(["git", "checkout", epic_name], capture_output=True, text=True)
-        if result.returncode == 0:
-            click.echo(f"🔀 Switched to branch: {epic_name}")
-            return True
-        else:
-            click.echo(f"⚠️ Failed to checkout {epic_name}: {result.stderr.strip()}")
-            return False
-    else:
-        # Create new branch from latest main
-        click.echo("🔀 Creating new branch from latest main...")
-        subprocess.run(["git", "checkout", "main"], capture_output=True, text=True)
-        subprocess.run(["git", "pull", "origin", "main"], capture_output=True, text=True)
-        result = subprocess.run(["git", "checkout", "-b", epic_name], capture_output=True, text=True)
-        if result.returncode == 0:
-            click.echo(f"🔀 Created and switched to branch: {epic_name}")
-            return True
-        else:
-            click.echo(f"⚠️ Failed to create branch {epic_name}: {result.stderr.strip()}")
-            return False
 
 
 @click.group()
@@ -116,18 +66,23 @@ def create_command_files():
 
 
 @cli.command()
+@click.option("--base-dir", "-b", default="agent", help="Base directory name (default: agent)")
 @click.pass_context
-def init(ctx):
+def init(ctx, base_dir: str):
     """Initialize moderails in current directory."""
-    db_path = init_db()
-    created_commands = create_command_files()
-    
-    if ctx.obj.get("json"):
-        click.echo(json.dumps({"status": "initialized", "path": str(db_path), "commands": created_commands}))
-    else:
-        click.echo(f"✅ Initialized moderails at {db_path}")
-        for cmd in created_commands:
-            click.echo(f"✨ Created {cmd}")
+    try:
+        db_path = init_db(base_dir=base_dir)
+        created_commands = create_command_files()
+        
+        if ctx.obj.get("json"):
+            click.echo(json.dumps({"status": "initialized", "path": str(db_path), "commands": created_commands}))
+        else:
+            click.echo(f"✅ Initialized moderails at {db_path}")
+            for cmd in created_commands:
+                click.echo(f"✨ Created {cmd}")
+    except ValueError as e:
+        click.echo(f"❌ Invalid base directory: {e}")
+        return
 
 
 # ============== START ==============
@@ -181,9 +136,6 @@ def start(ctx, is_new: bool, task_name: Optional[str], epic: Optional[str], tags
         click.echo(f"✅ Created task: {task.name}")
         click.echo(f"📁 File: {task.file_path}")
         
-        # Checkout to epic branch
-        checkout_epic_branch(epic)
-        
         click.echo("\n💡 Suggested: Go into RESEARCH mode to explore the task scope.")
         
     elif task_name:
@@ -219,9 +171,6 @@ def start(ctx, is_new: bool, task_name: Optional[str], epic: Optional[str], tags
         
         click.echo("\n---\n")
         
-        # Checkout to epic branch
-        checkout_epic_branch(task.epic.name)
-        
         if task.status == TaskStatus.TODO:
             click.echo("💡 Suggested: Go into RESEARCH mode")
         else:
@@ -247,7 +196,7 @@ def start(ctx, is_new: bool, task_name: Optional[str], epic: Optional[str], tags
                 for t in epic_tasks:
                     click.echo(f"    - Task: {t.name} ({t.status.value})")
             else:
-                click.echo(f"    (no tasks)")
+                click.echo("    (no tasks)")
         
         in_progress = [t for t in tasks if t.status == TaskStatus.IN_PROGRESS]
         todo = [t for t in tasks if t.status == TaskStatus.TODO]
@@ -360,42 +309,18 @@ def epic_delete(ctx, name: str, confirm: bool):
 
 @epic.command("summary")
 @click.option("--name", "-n", required=True, help="Epic name")
+@click.option("--short", is_flag=True, help="Show only filenames (no diffs)")
 @click.pass_context
-def epic_summary(ctx, name: str):
+def epic_summary(ctx, name: str, short: bool):
     """Get epic summary with completed task summaries and git diff."""
     services = get_services(ctx.obj.get("db_path"))
     
-    summary = services["epic"].get_summary(name)
+    summary = services["epic"].get_summary(name, short=short)
     if not summary:
         click.echo(f"❌ Epic '{name}' not found")
         return
     
     click.echo(summary)
-    
-    # Get git diff between main and epic branch
-    branch_name = name.lower().replace(" ", "-")
-    try:
-        # Stats summary
-        stat_result = subprocess.run(
-            ["git", "diff", "--stat", "main", branch_name],
-            capture_output=True, text=True
-        )
-        if stat_result.returncode == 0 and stat_result.stdout.strip():
-            click.echo("\n## Git Diff Stats (main..epic)\n")
-            click.echo(stat_result.stdout)
-        
-        # Full code diff
-        diff_result = subprocess.run(
-            ["git", "diff", "main", branch_name],
-            capture_output=True, text=True
-        )
-        if diff_result.returncode == 0 and diff_result.stdout.strip():
-            click.echo("\n## Code Diff\n")
-            click.echo("```diff")
-            click.echo(diff_result.stdout)
-            click.echo("```")
-    except Exception:
-        pass
 
 
 # ============== MODE ==============
@@ -405,7 +330,7 @@ def epic_summary(ctx, name: str):
 @click.pass_context
 def mode(ctx, name: str):
     """Get mode rules. Use when switching modes (e.g., //execute)."""
-    valid_modes = ["research", "brainstorm", "plan", "execute", "complete", "close"]
+    valid_modes = ["research", "brainstorm", "plan", "execute", "complete", "abort", "archive"]
     if name not in valid_modes:
         click.echo(f"❌ Invalid mode. Valid modes: {', '.join(valid_modes)}")
         return

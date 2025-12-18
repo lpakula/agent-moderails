@@ -5,6 +5,7 @@ from typing import Optional
 from sqlalchemy.orm import Session
 
 from ..db.models import Epic, Task, TaskStatus
+from ..utils.git import generate_epic_diff, generate_epic_files_changed
 
 
 class EpicService:
@@ -45,8 +46,14 @@ class EpicService:
         self.session.commit()
         return True
     
-    def get_summary(self, name: str) -> str:
-        """Get epic summary from completed task summaries."""
+    def get_summary(self, name: str, short: bool = False) -> str:
+        """
+        Get epic summary from completed task summaries and git diffs.
+        
+        Args:
+            name: Epic name
+            short: If True, show only filenames. If False, show full diffs.
+        """
         epic = self.get_by_name(name)
         if not epic:
             return ""
@@ -62,8 +69,26 @@ class EpicService:
         if not tasks:
             return f"# Epic: {epic.name}\n\nNo completed tasks yet."
         
-        parts = [f"# Epic: {epic.name}\n"]
+        # Build task summaries section
+        parts = [f"# Epic: {epic.name}\n", "## Completed Tasks\n"]
         for t in tasks:
             parts.append(f"- **{t.name}**: {t.summary}")
+        
+        # Extract git hashes
+        git_hashes = [t.git_hash for t in tasks if t.git_hash and t.git_hash.strip()]
+        
+        if git_hashes:
+            if short:
+                # Short format: only filenames
+                files_changed = generate_epic_files_changed(git_hashes)
+                if files_changed:
+                    parts.append("\n## Files Changed\n")
+                    parts.append(files_changed)
+            else:
+                # Full format: complete diffs
+                epic_diff = generate_epic_diff(git_hashes)
+                if epic_diff:
+                    parts.append("\n## Code Changes\n")
+                    parts.append(epic_diff)
         
         return "\n".join(parts)

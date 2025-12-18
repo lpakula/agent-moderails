@@ -12,7 +12,8 @@ Modal control system for AI agents.
 | PLAN | `#plan` | Create TODO list in task file |
 | EXECUTE | `#execute` | Implement TODO items one by one |
 | COMPLETE | `#complete` | Mark task done, commit |
-| CLOSE | `#close` | Abandon task, reset git |
+| ARCHIVE | `#archive` | (Optional) Convert epic to context file |
+| ABORT | `#abort` | Abandon task, reset git |
 
 ## CRITICAL RULES
 

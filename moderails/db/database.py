@@ -1,6 +1,5 @@
 """Database connection and auto-discovery."""
 
-import os
 from pathlib import Path
 from typing import Optional
 
@@ -8,6 +7,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from .models import Base
+from ..config import find_config_path, get_db_path as config_get_db_path, save_config
 
 # Module-level engine and session factory
 _engine = None
@@ -16,7 +16,7 @@ _SessionLocal = None
 
 def find_db_path(start_path: Optional[Path] = None) -> Optional[Path]:
     """
-    Find moderails/moderails.db by walking up from start_path.
+    Find moderails.db by using config.json to determine the path.
     
     Args:
         start_path: Starting directory (defaults to cwd)
@@ -24,38 +24,34 @@ def find_db_path(start_path: Optional[Path] = None) -> Optional[Path]:
     Returns:
         Path to moderails.db if found, None otherwise
     """
-    if start_path is None:
-        start_path = Path.cwd()
-    
-    current = start_path.resolve()
-    
-    # Walk up the directory tree
-    while current != current.parent:
-        db_path = current / "moderails" / "moderails.db"
+    config_path = find_config_path(start_path)
+    if config_path:
+        db_path = config_get_db_path(config_path)
         if db_path.exists():
             return db_path
-        current = current.parent
-    
-    # Check root
-    db_path = current / "moderails" / "moderails.db"
-    if db_path.exists():
-        return db_path
     
     return None
 
 
-def init_db(db_path: Optional[Path] = None) -> Path:
+def init_db(base_dir: str = "agent") -> Path:
     """
-    Initialize a new database at the specified path.
+    Initialize a new database and configuration.
     
     Args:
-        db_path: Path to database file (defaults to moderails/moderails.db in cwd)
+        base_dir: Base directory name (e.g., "agent", ".ai")
         
     Returns:
         Path to the created database
     """
-    if db_path is None:
-        db_path = Path.cwd() / "moderails" / "moderails.db"
+    # Create config
+    config = {
+        "base_dir": base_dir,
+        "version": "1.0"
+    }
+    config_path = save_config(config, base_dir)
+    
+    # Get db path from config
+    db_path = config_get_db_path(config_path)
     
     # Create directory if needed
     db_path.parent.mkdir(parents=True, exist_ok=True)
