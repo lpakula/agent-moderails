@@ -51,7 +51,7 @@ Modes define clear boundaries — no skipping ahead, no mixing phases.
 
 **Optional:**  
 **🚀 Onboard** — One-time codebase analysis to create initial context files  
-**💡 Brainstorm** — Explore alternative approaches  
+**💡 Brainstorm** — Explore alternative approaches after research  
 **❌ Abort** — Delete task and reset changes  
 **📦 Archive** — Convert completed epic to context file
 
