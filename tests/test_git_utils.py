@@ -11,6 +11,7 @@ from moderails.utils.git import (
     format_commit_diff,
     generate_epic_diff,
     generate_epic_files_changed,
+    truncate_patch,
 )
 
 
@@ -224,4 +225,89 @@ class TestGenerateEpicFilesChanged:
         
         # Should only appear once
         assert files.count("test.txt") == 1
+
+
+class TestTruncatePatch:
+    """Tests for truncate_patch function."""
+    
+    def test_truncate_patch_small_diff(self):
+        """Test that small diffs are not truncated."""
+        patch = """diff --git a/file.py b/file.py
+index abc123..def456 100644
+--- a/file.py
++++ b/file.py
+@@ -1,0 +2,3 @@
++line 1
++line 2
++line 3"""
+        
+        result = truncate_patch(patch, max_lines_per_file=100)
+        
+        assert result == patch
+        assert "truncated" not in result
+    
+    def test_truncate_patch_large_single_file(self):
+        """Test truncation of a large single file diff."""
+        # Create a patch with 150 lines
+        lines = ["diff --git a/large.py b/large.py"]
+        lines.append("index abc123..def456 100644")
+        lines.append("--- a/large.py")
+        lines.append("+++ b/large.py")
+        for i in range(146):  # 4 header lines + 146 = 150 total
+            lines.append(f"+new line {i}")
+        
+        patch = "\n".join(lines)
+        result = truncate_patch(patch, max_lines_per_file=100)
+        
+        result_lines = result.splitlines()
+        assert len(result_lines) == 101  # 100 lines + truncation message
+        assert "[diff truncated:" in result
+        assert "+50 more lines omitted" in result
+    
+    def test_truncate_patch_multiple_files_mixed(self):
+        """Test multiple files where some are truncated and some are not."""
+        # Small file (10 lines)
+        small_file = """diff --git a/small.py b/small.py
+index abc..def 100644
+--- a/small.py
++++ b/small.py
+@@ -1,0 +2,5 @@
++line 1
++line 2
++line 3
++line 4
++line 5"""
+        
+        # Large file (120 lines: 4 header + 116 content)
+        large_lines = ["diff --git a/large.py b/large.py"]
+        large_lines.append("index ghi..jkl 100644")
+        large_lines.append("--- a/large.py")
+        large_lines.append("+++ b/large.py")
+        for i in range(116):
+            large_lines.append(f"+large line {i}")
+        
+        patch = small_file + "\n" + "\n".join(large_lines)
+        result = truncate_patch(patch, max_lines_per_file=100)
+        
+        # Small file should be intact
+        assert "small.py" in result
+        assert "+line 1" in result
+        assert "+line 5" in result
+        
+        # Large file should be truncated
+        assert "large.py" in result
+        assert "[diff truncated:" in result
+        assert "+20 more lines omitted" in result
+    
+    def test_truncate_patch_empty(self):
+        """Test with empty patch."""
+        result = truncate_patch("")
+        assert result == ""
+    
+    def test_truncate_patch_no_diff_header(self):
+        """Test patch without diff headers (edge case)."""
+        patch = "+some line\n+another line"
+        result = truncate_patch(patch, max_lines_per_file=100)
+        # Should return original if no file boundaries detected
+        assert result == patch
 

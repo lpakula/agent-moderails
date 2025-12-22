@@ -65,6 +65,57 @@ def get_patch_unified(hash: str, cwd: str = ".") -> str:
     return output.rstrip() if output else ""
 
 
+def truncate_patch(patch: str, max_lines_per_file: int = 100) -> str:
+    """
+    Truncate per-file diffs to avoid context overload.
+    
+    Args:
+        patch: Unified diff patch output
+        max_lines_per_file: Maximum lines to show per file diff
+    
+    Returns:
+        Truncated patch with markers for omitted content
+    """
+    if not patch:
+        return ""
+    
+    lines = patch.splitlines()
+    result = []
+    current_file_lines = []
+    current_file_start = None
+    in_file = False
+    
+    for i, line in enumerate(lines):
+        # Detect start of new file diff
+        if line.startswith("diff --git "):
+            # Process previous file if any
+            if in_file and current_file_start is not None:
+                file_content = lines[current_file_start:i]
+                if len(file_content) > max_lines_per_file:
+                    # Truncate and add marker
+                    result.extend(file_content[:max_lines_per_file])
+                    omitted = len(file_content) - max_lines_per_file
+                    result.append(f"... [diff truncated: +{omitted} more lines omitted for context efficiency]")
+                else:
+                    result.extend(file_content)
+            
+            # Start new file
+            current_file_start = i
+            in_file = True
+        
+    # Process last file
+    if in_file and current_file_start is not None:
+        file_content = lines[current_file_start:]
+        if len(file_content) > max_lines_per_file:
+            result.extend(file_content[:max_lines_per_file])
+            omitted = len(file_content) - max_lines_per_file
+            result.append(f"... [diff truncated: +{omitted} more lines omitted for context efficiency]")
+        else:
+            result.extend(file_content)
+    
+    return "\n".join(result) if result else patch
+
+
 def format_commit_diff(hash: str, cwd: str = ".") -> str:
     """
     Format a single commit in LLM-optimized structure.
@@ -81,6 +132,10 @@ def format_commit_diff(hash: str, cwd: str = ".") -> str:
     commit_hash, subject = get_commit_meta(hash, cwd)
     name_status = get_name_status(hash, cwd)
     patch = get_patch_unified(hash, cwd)
+    
+    # Truncate large diffs to avoid context overload
+    if patch:
+        patch = truncate_patch(patch)
     
     parts = [f"@c {commit_hash}"]
     
