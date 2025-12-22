@@ -5,7 +5,7 @@ from typing import Optional
 from sqlalchemy.orm import Session
 
 from ..db.models import Epic, Task, TaskStatus
-from ..utils.git import generate_epic_diff, generate_epic_files_changed
+from ..utils.git import generate_epic_diff, generate_epic_files_changed, get_name_status
 
 
 class EpicService:
@@ -52,7 +52,7 @@ class EpicService:
         
         Args:
             name: Epic name
-            short: If True, show only filenames. If False, show full diffs.
+            short: If True, show only filenames. If False, show full diffs per task.
         """
         epic = self.get_by_name(name)
         if not epic:
@@ -69,26 +69,37 @@ class EpicService:
         if not tasks:
             return f"# Epic: {epic.name}\n\nNo completed tasks yet."
         
-        # Build task summaries section
+        # Build epic summary with per-task details
         parts = [f"# Epic: {epic.name}\n", "## Completed Tasks\n"]
-        for t in tasks:
-            parts.append(f"- **{t.name}**: {t.summary}")
         
-        # Extract git hashes
-        git_hashes = [t.git_hash for t in tasks if t.git_hash and t.git_hash.strip()]
-        
-        if git_hashes:
-            if short:
-                # Short format: only filenames
-                files_changed = generate_epic_files_changed(git_hashes)
-                if files_changed:
-                    parts.append("\n## Files Changed\n")
-                    parts.append(files_changed)
-            else:
-                # Full format: complete diffs
-                epic_diff = generate_epic_diff(git_hashes)
-                if epic_diff:
-                    parts.append("\n## Code Changes\n")
-                    parts.append(epic_diff)
+        for idx, task in enumerate(tasks, 1):
+            # Task header with number and date
+            date_str = task.completed_at.strftime("%b %d") if task.completed_at else "unknown date"
+            parts.append(f"\n### {idx}. {task.name} ({date_str})\n")
+            parts.append(f"**Summary**: {task.summary}\n")
+            
+            # Show files and diffs if git hash exists
+            if task.git_hash and task.git_hash.strip():
+                git_hash = task.git_hash.strip()
+                
+                if short:
+                    # Short format: only filenames for this task
+                    files_changed = generate_epic_files_changed([git_hash])
+                    if files_changed:
+                        parts.append("**Files changed**:")
+                        parts.append(files_changed)
+                else:
+                    # Full format: show diff for this task
+                    name_status = get_name_status(git_hash)
+                    if name_status:
+                        parts.append("**Files changed**:")
+                        for line in name_status.splitlines():
+                            parts.append(f"  {line}")
+                        parts.append("")
+                    
+                    task_diff = generate_epic_diff([git_hash])
+                    if task_diff:
+                        parts.append("**Changes**:")
+                        parts.append(task_diff)
         
         return "\n".join(parts)

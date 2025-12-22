@@ -23,7 +23,7 @@ class TestInitCommand:
             result = cli_runner.invoke(cli, ['init'])
             
             assert result.exit_code == 0
-            assert "Initialized moderails" in result.output
+            assert "ModeRails initialized successfully" in result.output
             assert "#onboard" in result.output  # Suggests onboarding
             
             # Check files were created
