@@ -77,9 +77,30 @@ def init(ctx, base_dir: str):
         if ctx.obj.get("json"):
             click.echo(json.dumps({"status": "initialized", "path": str(db_path), "commands": created_commands}))
         else:
-            click.echo(f"✅ Initialized moderails at {db_path}")
-            for cmd in created_commands:
-                click.echo(f"✨ Created {cmd}")
+            # Use relative paths from current directory
+            cwd = Path.cwd()
+            rel_db_path = Path(db_path).relative_to(cwd) if Path(db_path).is_relative_to(cwd) else db_path
+            rel_commands = [Path(cmd).relative_to(cwd) if Path(cmd).is_relative_to(cwd) else cmd for cmd in created_commands]
+            
+            click.echo()
+            click.echo(click.style("✓ ModeRails initialized successfully!", fg="green", bold=True))
+            click.echo()
+            click.echo(f"  Database:  {click.style(str(rel_db_path), fg='cyan')}")
+            for cmd in rel_commands:
+                click.echo(f"  Commands:  {click.style(str(cmd), fg='cyan')}")
+            click.echo()
+            click.echo(click.style("Getting started:", fg="white", bold=True))
+            click.echo()
+            click.echo("  → Initialize the protocol in your editor:")
+            click.echo(f"      {click.style('/moderails', fg='yellow')}")
+            click.echo("  → Build your project context (one-time setup):")
+            click.echo(f"      {click.style('#onboard', fg='yellow')}")
+            click.echo()
+            click.echo("  → Check status anytime:")
+            click.echo(f"      {click.style('moderails', fg='green')} status")
+            click.echo()
+            click.echo(click.style("💡 Tip:", fg="blue") + " Run 'moderails --help' to see all commands")
+            click.echo()
     except ValueError as e:
         click.echo(f"❌ Invalid base directory: {e}")
         return
@@ -330,7 +351,7 @@ def epic_summary(ctx, name: str, short: bool):
 @click.pass_context
 def mode(ctx, name: str):
     """Get mode definition. Use when switching modes (e.g., //execute)."""
-    valid_modes = ["research", "brainstorm", "plan", "execute", "complete", "abort", "archive"]
+    valid_modes = ["onboard", "research", "brainstorm", "plan", "execute", "complete", "abort", "archive"]
     if name not in valid_modes:
         click.echo(f"❌ Invalid mode. Valid modes: {', '.join(valid_modes)}")
         return

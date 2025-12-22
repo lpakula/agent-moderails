@@ -24,6 +24,7 @@ class TestInitCommand:
             
             assert result.exit_code == 0
             assert "Initialized moderails" in result.output
+            assert "#onboard" in result.output  # Suggests onboarding
             
             # Check files were created
             assert (Path.cwd() / "agent" / "moderails" / "moderails.db").exists()
@@ -153,6 +154,17 @@ class TestModeCommand:
             
             assert result.exit_code == 0
             assert "EXECUTE MODE" in result.output
+    
+    def test_mode_onboard(self, cli_runner):
+        """Test getting onboard mode definition."""
+        with cli_runner.isolated_filesystem():
+            cli_runner.invoke(cli, ['init'])
+            
+            result = cli_runner.invoke(cli, ['mode', '--name', 'onboard'])
+            
+            assert result.exit_code == 0
+            assert "ONBOARD MODE" in result.output
+            assert "One-time codebase analysis" in result.output
     
     def test_mode_invalid(self, cli_runner):
         """Test invalid mode name."""

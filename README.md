@@ -49,6 +49,8 @@ Modes define clear boundaries — no skipping ahead, no mixing phases.
 **⚡ Execute** — Implement the plan  
 **✅ Complete** — Finish the task
 
+**Setup:**  
+**🚀 Onboard** — One-time codebase analysis to create initial context files
 **Optional:**  
 **💡 Brainstorm** — Explore alternative approaches  
 **❌ Abort** — Delete task and reset changes  

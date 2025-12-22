@@ -15,6 +15,12 @@ Modal control system for AI agents.
 | ARCHIVE | `#archive` | (Optional) Convert epic to context file |
 | ABORT | `#abort` | Abandon task, reset git |
 
+## SETUP MODE
+
+| Mode | Command | Purpose |
+|------|---------|---------|
+| ONBOARD | `#onboard` | (One-time) Bootstrap context after init |
+
 ## CRITICAL RULES
 
 - **MUST** start every response with `[MODE: NAME]`
