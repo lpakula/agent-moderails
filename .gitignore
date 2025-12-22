@@ -6,6 +6,10 @@ dist/
 # Virtual environments
 .venv/
 
+# Testing
+.pytest_cache/
+.coverage
+
 # IDE
 .idea/
 .vscode/

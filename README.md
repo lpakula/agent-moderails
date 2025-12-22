@@ -3,6 +3,7 @@
 ![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)
 ![License MIT](https://img.shields.io/badge/license-MIT-green.svg)
 ![CLI](https://img.shields.io/badge/cli-pipx-orange.svg)
+![Coverage](https://img.shields.io/badge/coverage-86%25-brightgreen.svg)
 
 **Plan Mode on steroids** — structured agent workflow with persistent memory.
 
@@ -262,3 +263,21 @@ moderails --help
 ```
 
 Changes are reflected immediately — no reinstall needed.
+
+### Running Tests
+
+The project includes a comprehensive test suite covering all CLI commands and core functionality:
+
+```bash
+# Run all tests in Docker (recommended)
+./scripts/test.sh
+
+# Run specific test file
+./scripts/test.sh tests/test_cli.py
+
+# Run specific test
+./scripts/test.sh tests/test_cli.py::TestInitCommand::test_init_success
+
+# Rebuild image (after updating dependencies in pyproject.toml)
+./scripts/test.sh --rebuild
+```
