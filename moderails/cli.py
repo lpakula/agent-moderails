@@ -8,7 +8,7 @@ import click
 
 from .db.database import find_db_path, get_session, init_db
 from .db.models import TaskStatus
-from .rules import get_rule
+from .modes import get_mode
 from .services import ContextService, EpicService, TaskService
 
 
@@ -101,7 +101,7 @@ def start(ctx, is_new: bool, task_name: Optional[str], epic: Optional[str], tags
     Session:      moderails start
     """
     # Print protocol overview
-    click.echo(get_rule("start"))
+    click.echo(get_mode("start"))
     click.echo("\n---\n")
     
     try:
@@ -329,13 +329,13 @@ def epic_summary(ctx, name: str, short: bool):
 @click.option("--name", "-n", required=True, help="Mode name")
 @click.pass_context
 def mode(ctx, name: str):
-    """Get mode rules. Use when switching modes (e.g., //execute)."""
+    """Get mode definition. Use when switching modes (e.g., //execute)."""
     valid_modes = ["research", "brainstorm", "plan", "execute", "complete", "abort", "archive"]
     if name not in valid_modes:
         click.echo(f"❌ Invalid mode. Valid modes: {', '.join(valid_modes)}")
         return
     
-    click.echo(get_rule(name))
+    click.echo(get_mode(name))
 
 
 # ============== STATUS ==============

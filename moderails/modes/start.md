@@ -36,4 +36,4 @@ moderails mode --name execute
 | `moderails start` | Show status and protocol |
 | `moderails start --new --task "task" --epic "epic"` | Create new task |
 | `moderails start --task "task"` | Continue existing task |
-| `moderails mode --name <mode>` | Get mode rules |
+| `moderails mode --name <mode>` | Get mode definition |

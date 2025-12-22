@@ -27,7 +27,7 @@ moderails = "moderails.cli:cli"
 packages = ["moderails"]
 
 [tool.hatch.build.targets.wheel.force-include]
-"moderails/rules" = "moderails/rules"
+"moderails/modes" = "moderails/modes"
 
 [tool.hatch.build]
 include = [

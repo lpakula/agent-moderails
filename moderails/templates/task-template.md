@@ -18,7 +18,6 @@ Key findings from RESEARCH mode. Technical decisions, patterns to follow, depend
 Atomic, executable items. Each should be completable in one step.
 
 [ ] First specific action
-
 [ ] Second specific action
 
 ## MEETING NOTES

@@ -1,4 +1,4 @@
-# Moderails – EXECUTE MODE
+# EXECUTE MODE
 
 **Active Mode**: EXECUTE  
 **Output Format**: Start with `[MODE: EXECUTE]`

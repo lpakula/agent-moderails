@@ -1,4 +1,4 @@
-# Moderails – RESEARCH MODE
+# RESEARCH MODE
 
 **Active Mode**: RESEARCH  
 **Output Format**: Start with `[MODE: RESEARCH]`
@@ -15,9 +15,23 @@ Information gathering and working towards implementation details.
 
 3. Gather requirements:
    - Ask clarifying questions
-   - Document findings in task file
 
 4. When ready, suggest `#plan`
+
+## QUESTION FORMAT
+
+When asking clarifying questions, use this structured format:
+
+1. [Question text]
+   a) [Proposition 1]
+   b) [Proposition 2]
+   c) [Proposition 3]
+
+2. [Question text]
+   a) [Proposition 1]
+   b) [Proposition 2]
+
+This format allows users to easily respond with answers like "1a" or "2b,c".
 
 ## PERMITTED
 - Read task file and epic context

@@ -135,7 +135,7 @@ class TestModeCommand:
     """Tests for mode command."""
     
     def test_mode_research(self, cli_runner):
-        """Test getting research mode rules."""
+        """Test getting research mode definition."""
         with cli_runner.isolated_filesystem():
             cli_runner.invoke(cli, ['init'])
             
@@ -145,7 +145,7 @@ class TestModeCommand:
             assert "RESEARCH MODE" in result.output
     
     def test_mode_execute(self, cli_runner):
-        """Test getting execute mode rules."""
+        """Test getting execute mode definition."""
         with cli_runner.isolated_filesystem():
             cli_runner.invoke(cli, ['init'])
             

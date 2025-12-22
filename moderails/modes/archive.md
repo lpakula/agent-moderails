@@ -1,4 +1,4 @@
-# Moderails – ARCHIVE MODE
+# ARCHIVE MODE
 
 **Active Mode**: ARCHIVE  
 **Output Format**: Start with `[MODE: ARCHIVE]`

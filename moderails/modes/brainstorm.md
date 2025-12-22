@@ -1,4 +1,4 @@
-# Moderails – BRAINSTORM MODE
+# BRAINSTORM MODE
 
 **Active Mode**: BRAINSTORM  
 **Output Format**: Start with `[MODE: BRAINSTORM]`

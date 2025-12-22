@@ -1,4 +1,4 @@
-# Moderails – PLAN MODE
+# PLAN MODE
 
 **Active Mode**: PLAN  
 **Output Format**: Start with `[MODE: PLAN]`

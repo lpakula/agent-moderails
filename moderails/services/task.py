@@ -7,7 +7,7 @@ from typing import Optional
 from sqlalchemy.orm import Session
 
 from ..db.models import Epic, Task, TaskStatus
-from ..rules import get_task_template
+from ..modes import get_task_template
 
 
 class TaskService:

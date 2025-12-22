@@ -220,7 +220,7 @@ moderails start --task "task"
 # Show all epics and tasks
 moderails status
 
-# Get mode-specific rules
+# Get mode definition
 moderails mode --name <mode>
 
 # Task management

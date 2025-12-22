@@ -1,4 +1,4 @@
-# Moderails – COMPLETE MODE
+# COMPLETE MODE
 
 **Active Mode**: COMPLETE  
 **Output Format**: Start with `[MODE: COMPLETE]`

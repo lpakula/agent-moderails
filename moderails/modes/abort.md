@@ -1,4 +1,4 @@
-# Moderails – ABORT MODE
+# ABORT MODE
 
 **Active Mode**: ABORT  
 **Output Format**: Start with `[MODE: ABORT]`
