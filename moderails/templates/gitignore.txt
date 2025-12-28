@@ -1,0 +1,10 @@
+# moderails database
+*.db
+*.db-journal
+
+# Task plan files (not committed by default)
+tasks/
+
+# README 
+context/README.md
+

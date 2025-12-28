@@ -5,7 +5,6 @@ from click.testing import CliRunner
 from pathlib import Path
 
 from moderails.cli import cli
-from moderails.db.models import Epic, Task, TaskStatus
 
 
 @pytest.fixture
@@ -24,27 +23,11 @@ class TestInitCommand:
             
             assert result.exit_code == 0
             assert "ModeRails initialized successfully" in result.output
-            assert "#onboard" in result.output  # Suggests onboarding
+            assert "agent will guide you" in result.output
             
             # Check files were created
-            assert (Path.cwd() / "agent" / "moderails" / "moderails.db").exists()
-            assert (Path.cwd() / "agent" / "moderails" / "config.json").exists()
-    
-    def test_init_with_custom_base_dir(self, cli_runner):
-        """Test initialization with custom base directory."""
-        with cli_runner.isolated_filesystem():
-            result = cli_runner.invoke(cli, ['init', '--base-dir', 'tools'])
-            
-            assert result.exit_code == 0
-            assert (Path.cwd() / "tools" / "moderails" / "moderails.db").exists()
-    
-    def test_init_with_invalid_base_dir(self, cli_runner):
-        """Test initialization with invalid base directory."""
-        with cli_runner.isolated_filesystem():
-            result = cli_runner.invoke(cli, ['init', '--base-dir', '.ai'])
-            
-            assert result.exit_code == 0
-            assert "Invalid base directory" in result.output
+            assert (Path.cwd() / ".moderails" / "moderails.db").exists()
+            assert (Path.cwd() / ".moderails" / "config.json").exists()
 
 
 class TestStartCommand:
@@ -61,77 +44,37 @@ class TestStartCommand:
             assert result.exit_code == 0
             assert "CURRENT STATUS" in result.output or "No epics yet" in result.output
     
-    def test_start_new_task(self, cli_runner):
-        """Test creating a new task."""
+    def test_start_with_task(self, cli_runner):
+        """Test start command with an existing task."""
         with cli_runner.isolated_filesystem():
             # Initialize first
             cli_runner.invoke(cli, ['init'])
             
-            result = cli_runner.invoke(cli, [
-                'start',
-                '--new',
-                '--task', 'test-task',
-                '--epic', 'test-epic'
-            ])
-            
+            # Create an epic and task using direct commands
+            result = cli_runner.invoke(cli, ['epic', 'create', '--name', 'test-epic'])
             assert result.exit_code == 0
-            assert "Created task" in result.output
-    
-    def test_start_existing_task(self, cli_runner):
-        """Test continuing an existing task."""
-        with cli_runner.isolated_filesystem():
-            # Initialize first
-            cli_runner.invoke(cli, ['init'])
+            
+            # Extract epic ID from output (format: "✅ Created epic: <id> - test-epic")
+            epic_id = result.output.split("Created epic: ")[1].split(" -")[0].strip()
             
             # Create a task
-            cli_runner.invoke(cli, [
-                'start',
-                '--new',
-                '--task', 'my-task',
-                '--epic', 'my-epic'
+            result = cli_runner.invoke(cli, [
+                'task', 'create',
+                '--name', 'test-task',
+                '--epic', epic_id
             ])
+            assert result.exit_code == 0
             
-            # Then continue it
-            result = cli_runner.invoke(cli, ['start', '--task', 'my-task'])
+            # Run start command
+            result = cli_runner.invoke(cli, ['start'])
             
             assert result.exit_code == 0
-            assert "my-task" in result.output
+            assert "CURRENT STATUS" in result.output
 
 
 class TestStatusCommand:
     """Tests for status command."""
     
-    def test_status_empty(self, cli_runner):
-        """Test status with no epics."""
-        with cli_runner.isolated_filesystem():
-            # Initialize first
-            cli_runner.invoke(cli, ['init'])
-            
-            result = cli_runner.invoke(cli, ['status'])
-            
-            assert result.exit_code == 0
-            assert "No tasks" in result.output or "0 tasks" in result.output or "No epics found" in result.output
-    
-    def test_status_with_tasks(self, cli_runner):
-        """Test status with existing tasks."""
-        with cli_runner.isolated_filesystem():
-            # Initialize first
-            cli_runner.invoke(cli, ['init'])
-            
-            # Create a task
-            cli_runner.invoke(cli, [
-                'start',
-                '--new',
-                '--task', 'test-task',
-                '--epic', 'test-epic'
-            ])
-            
-            result = cli_runner.invoke(cli, ['status'])
-            
-            assert result.exit_code == 0
-            assert "test-task" in result.output
-
-
 class TestModeCommand:
     """Tests for mode command."""
     
@@ -155,17 +98,6 @@ class TestModeCommand:
             assert result.exit_code == 0
             assert "EXECUTE MODE" in result.output
     
-    def test_mode_onboard(self, cli_runner):
-        """Test getting onboard mode definition."""
-        with cli_runner.isolated_filesystem():
-            cli_runner.invoke(cli, ['init'])
-            
-            result = cli_runner.invoke(cli, ['mode', '--name', 'onboard'])
-            
-            assert result.exit_code == 0
-            assert "ONBOARD MODE" in result.output
-            assert "One-time codebase analysis" in result.output
-    
     def test_mode_invalid(self, cli_runner):
         """Test invalid mode name."""
         with cli_runner.isolated_filesystem():
@@ -185,17 +117,16 @@ class TestTaskCommands:
         with cli_runner.isolated_filesystem():
             cli_runner.invoke(cli, ['init'])
             
-            # Create task first
-            cli_runner.invoke(cli, [
-                'start',
-                '--new',
-                '--task', 'test-task',
-                '--epic', 'test-epic'
-            ])
+            # Create epic and task
+            epic_result = cli_runner.invoke(cli, ['epic', 'create', '--name', 'test-epic'])
+            epic_id = epic_result.output.split("Created epic: ")[1].split(" -")[0].strip()
+            
+            task_result = cli_runner.invoke(cli, ['task', 'create', '--name', 'test-task', '--epic', epic_id])
+            task_id = task_result.output.split("Task created: ")[1].split(" -")[0].strip()
             
             result = cli_runner.invoke(cli, [
                 'task', 'update',
-                '--task', 'test-task',
+                '--task', task_id,
                 '--status', 'in-progress'
             ])
             
@@ -207,16 +138,16 @@ class TestTaskCommands:
         with cli_runner.isolated_filesystem():
             cli_runner.invoke(cli, ['init'])
             
-            cli_runner.invoke(cli, [
-                'start',
-                '--new',
-                '--task', 'test-task',
-                '--epic', 'test-epic'
-            ])
+            # Create epic and task
+            epic_result = cli_runner.invoke(cli, ['epic', 'create', '--name', 'test-epic'])
+            epic_id = epic_result.output.split("Created epic: ")[1].split(" -")[0].strip()
+            
+            task_result = cli_runner.invoke(cli, ['task', 'create', '--name', 'test-task', '--epic', epic_id])
+            task_id = task_result.output.split("Task created: ")[1].split(" -")[0].strip()
             
             result = cli_runner.invoke(cli, [
                 'task', 'update',
-                '--task', 'test-task',
+                '--task', task_id,
                 '--summary', 'New summary'
             ])
             
@@ -228,16 +159,16 @@ class TestTaskCommands:
         with cli_runner.isolated_filesystem():
             cli_runner.invoke(cli, ['init'])
             
-            cli_runner.invoke(cli, [
-                'start',
-                '--new',
-                '--task', 'to-delete',
-                '--epic', 'test-epic'
-            ])
+            # Create epic and task
+            epic_result = cli_runner.invoke(cli, ['epic', 'create', '--name', 'test-epic'])
+            epic_id = epic_result.output.split("Created epic: ")[1].split(" -")[0].strip()
+            
+            task_result = cli_runner.invoke(cli, ['task', 'create', '--name', 'to-delete', '--epic', epic_id])
+            task_id = task_result.output.split("Task created: ")[1].split(" -")[0].strip()
             
             result = cli_runner.invoke(cli, [
                 'task', 'delete',
-                '--task', 'to-delete',
+                '--task', task_id,
                 '--confirm'
             ])
             
@@ -249,16 +180,16 @@ class TestTaskCommands:
         with cli_runner.isolated_filesystem():
             cli_runner.invoke(cli, ['init'])
             
-            cli_runner.invoke(cli, [
-                'start',
-                '--new',
-                '--task', 'test-task',
-                '--epic', 'test-epic'
-            ])
+            # Create epic and task
+            epic_result = cli_runner.invoke(cli, ['epic', 'create', '--name', 'test-epic'])
+            epic_id = epic_result.output.split("Created epic: ")[1].split(" -")[0].strip()
+            
+            task_result = cli_runner.invoke(cli, ['task', 'create', '--name', 'test-task', '--epic', epic_id])
+            task_id = task_result.output.split("Task created: ")[1].split(" -")[0].strip()
             
             result = cli_runner.invoke(cli, [
                 'task', 'delete',
-                '--task', 'test-task'
+                '--task', task_id
             ])
             
             assert result.exit_code == 0
@@ -268,107 +199,31 @@ class TestTaskCommands:
 class TestEpicCommands:
     """Tests for epic subcommands."""
     
-    def test_epic_summary(self, cli_runner):
-        """Test getting epic summary."""
+    def test_epic_list(self, cli_runner):
+        """Test listing epics."""
         with cli_runner.isolated_filesystem():
             cli_runner.invoke(cli, ['init'])
             
             # Create epic with task
-            cli_runner.invoke(cli, [
-                'start',
-                '--new',
-                '--task', 'test-task',
-                '--epic', 'test-epic'
-            ])
+            epic_result = cli_runner.invoke(cli, ['epic', 'create', '--name', 'test-epic'])
+            epic_id = epic_result.output.split("Created epic: ")[1].split(" -")[0].strip()
             
-            result = cli_runner.invoke(cli, [
-                'epic', 'summary',
-                '--name', 'test-epic'
-            ])
+            result = cli_runner.invoke(cli, ['epic', 'list'])
             
             assert result.exit_code == 0
             assert "test-epic" in result.output
+            assert epic_id in result.output
     
-    def test_epic_summary_short(self, cli_runner):
-        """Test getting epic summary with short flag."""
+    def test_epic_create(self, cli_runner):
+        """Test creating an epic manually."""
         with cli_runner.isolated_filesystem():
             cli_runner.invoke(cli, ['init'])
             
-            cli_runner.invoke(cli, [
-                'start',
-                '--new',
-                '--task', 'test-task',
-                '--epic', 'test-epic'
-            ])
-            
             result = cli_runner.invoke(cli, [
-                'epic', 'summary',
-                '--name', 'test-epic',
-                '--short'
+                'epic', 'create',
+                '--name', 'new-epic'
             ])
             
             assert result.exit_code == 0
-            assert "test-epic" in result.output
-    
-    def test_epic_update(self, cli_runner):
-        """Test updating epic tags."""
-        with cli_runner.isolated_filesystem():
-            cli_runner.invoke(cli, ['init'])
-            
-            cli_runner.invoke(cli, [
-                'start',
-                '--new',
-                '--task', 'test-task',
-                '--epic', 'test-epic'
-            ])
-            
-            result = cli_runner.invoke(cli, [
-                'epic', 'update',
-                '--name', 'test-epic',
-                '--tags', 'backend,api'
-            ])
-            
-            assert result.exit_code == 0
-            assert "Updated epic" in result.output
-    
-    def test_epic_delete(self, cli_runner):
-        """Test deleting an epic."""
-        with cli_runner.isolated_filesystem():
-            cli_runner.invoke(cli, ['init'])
-            
-            cli_runner.invoke(cli, [
-                'start',
-                '--new',
-                '--task', 'test-task',
-                '--epic', 'to-delete'
-            ])
-            
-            result = cli_runner.invoke(cli, [
-                'epic', 'delete',
-                '--name', 'to-delete',
-                '--confirm'
-            ])
-            
-            assert result.exit_code == 0
-            assert "Deleted epic" in result.output
-    
-    def test_epic_delete_without_confirm(self, cli_runner):
-        """Test that epic delete requires confirmation."""
-        with cli_runner.isolated_filesystem():
-            cli_runner.invoke(cli, ['init'])
-            
-            cli_runner.invoke(cli, [
-                'start',
-                '--new',
-                '--task', 'test-task',
-                '--epic', 'test-epic'
-            ])
-            
-            result = cli_runner.invoke(cli, [
-                'epic', 'delete',
-                '--name', 'test-epic'
-            ])
-            
-            assert result.exit_code == 0
-            assert "Use --confirm" in result.output
+            assert "Created epic" in result.output
 

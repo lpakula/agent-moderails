@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from .models import Base
 from ..config import find_config_path, get_db_path as config_get_db_path, save_config
+from ..templates import get_template_path
 
 # Module-level engine and session factory
 _engine = None
@@ -33,22 +34,16 @@ def find_db_path(start_path: Optional[Path] = None) -> Optional[Path]:
     return None
 
 
-def init_db(base_dir: str = "agent") -> Path:
+def init_db() -> Path:
     """
-    Initialize a new database and configuration.
+    Initialize a new database and configuration in .moderails directory.
     
-    Args:
-        base_dir: Base directory name (e.g., "agent", ".ai")
-        
     Returns:
         Path to the created database
     """
     # Create config
-    config = {
-        "base_dir": base_dir,
-        "version": "1.0"
-    }
-    config_path = save_config(config, base_dir)
+    config = {"version": "1.0"}
+    config_path = save_config(config)
     
     # Get db path from config
     db_path = config_get_db_path(config_path)
@@ -62,14 +57,26 @@ def init_db(base_dir: str = "agent") -> Path:
     
     # Create .gitignore in moderails directory
     gitignore_path = db_path.parent / ".gitignore"
-    gitignore_content = """# moderails database
-*.db
-*.db-journal
-
-# Task files (not committed)
-tasks/
-"""
+    gitignore_template = get_template_path("gitignore.txt")
+    gitignore_content = gitignore_template.read_text()
     gitignore_path.write_text(gitignore_content)
+    
+    # Create context directories
+    context_dir = db_path.parent / "context"
+    context_dir.mkdir(exist_ok=True)
+    
+    mandatory_dir = context_dir / "mandatory"
+    mandatory_dir.mkdir(exist_ok=True)
+    
+    search_dir = context_dir / "search"
+    search_dir.mkdir(exist_ok=True)
+    
+    # Create README in context directory
+    context_readme = context_dir / "README.md"
+    if not context_readme.exists():
+        readme_template = get_template_path("context-readme.md")
+        context_readme_content = readme_template.read_text()
+        context_readme.write_text(context_readme_content)
     
     return db_path
 

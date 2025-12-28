@@ -1,44 +1,47 @@
-"""Context service - file-based context management."""
+"""Context service - manages mandatory context loading."""
 
 from pathlib import Path
+from typing import Optional
 
 
 class ContextService:
-    """Load context from moderails/context/ files.
-    
-    - Root .md files are mandatory (always loaded)
-    - Subfolder .md files are loaded by tag name
-    """
-    
     def __init__(self, moderails_dir: Path):
+        self.moderails_dir = moderails_dir
         self.context_dir = moderails_dir / "context"
+        self.mandatory_dir = self.context_dir / "mandatory"
     
-    def load_for_tags(self, tags: list[str]) -> str:
-        """Load combined context content.
+    def load_mandatory_context(self) -> Optional[str]:
+        """Load all files from mandatory context directory.
         
-        1. Always loads .md files from root (mandatory)
-        2. Loads .md files from tag subfolders
+        Returns:
+            Concatenated content of all mandatory context files, or None if directory doesn't exist
         """
-        if not self.context_dir.exists():
-            return ""
+        if not self.mandatory_dir.exists():
+            return None
         
-        parts = []
+        # Get all markdown files in mandatory directory
+        context_files = sorted(self.mandatory_dir.glob("*.md"))
         
-        # Load mandatory context (root .md files)
-        for md_file in sorted(self.context_dir.glob("*.md")):
-            if md_file.is_file():
-                content = md_file.read_text()
-                if content.strip():
-                    parts.append(f"<!-- Context: {md_file.name} (mandatory) -->\n{content}")
+        if not context_files:
+            return None
         
-        # Load tag-specific context
-        if tags:
-            for tag in tags:
-                tag_dir = self.context_dir / tag
-                if tag_dir.is_dir():
-                    for md_file in sorted(tag_dir.glob("*.md")):
-                        content = md_file.read_text()
-                        if content.strip():
-                            parts.append(f"<!-- Context: {tag}/{md_file.name} -->\n{content}")
+        # Build context output
+        context_parts = ["## MANDATORY CONTEXT\n"]
         
-        return "\n\n---\n\n".join(parts)
+        for file_path in context_files:
+            try:
+                content = file_path.read_text()
+                context_parts.append(f"### {file_path.name}\n")
+                context_parts.append(content)
+                context_parts.append("\n")
+            except Exception:
+                # Skip files that can't be read
+                continue
+        
+        return "\n".join(context_parts) if len(context_parts) > 1 else None
+    
+    def ensure_directories(self) -> None:
+        """Ensure context directories exist."""
+        self.context_dir.mkdir(exist_ok=True)
+        self.mandatory_dir.mkdir(exist_ok=True)
+

@@ -1,6 +1,7 @@
 """Git utilities for generating LLM-optimized commit diffs."""
 
 import subprocess
+from pathlib import Path
 from typing import Optional
 
 
@@ -18,6 +19,29 @@ def _run_git(args: list[str], cwd: str = ".") -> Optional[str]:
             return None
         return result.stdout
     except Exception:
+        return None
+
+
+def get_current_commit_hash(repo_dir: Path) -> Optional[str]:
+    """
+    Get the current commit hash (HEAD).
+    
+    Args:
+        repo_dir: Repository directory
+    
+    Returns:
+        Full commit hash or None if not in a git repo or no commits
+    """
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            capture_output=True,
+            text=True,
+            check=True,
+            cwd=repo_dir
+        )
+        return result.stdout.strip()
+    except subprocess.CalledProcessError:
         return None
 
 
@@ -81,7 +105,6 @@ def truncate_patch(patch: str, max_lines_per_file: int = 100) -> str:
     
     lines = patch.splitlines()
     result = []
-    current_file_lines = []
     current_file_start = None
     in_file = False
     

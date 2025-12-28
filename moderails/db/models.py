@@ -1,6 +1,7 @@
 """SQLAlchemy models for moderails."""
 
-import uuid
+import secrets
+import string
 from datetime import datetime, timezone
 from enum import Enum
 
@@ -8,23 +9,34 @@ from sqlalchemy import Column, DateTime, Enum as SQLEnum, ForeignKey, String, Te
 from sqlalchemy.orm import DeclarativeBase, relationship
 
 
+def generate_task_id() -> str:
+    """Generate a 6-character alphanumeric task ID."""
+    chars = string.ascii_lowercase + string.digits
+    return ''.join(secrets.choice(chars) for _ in range(6))
+
+
 class Base(DeclarativeBase):
     pass
 
 
 class TaskStatus(str, Enum):
-    TODO = "todo"
+    DRAFT = "draft"
     IN_PROGRESS = "in-progress"
     COMPLETED = "completed"
+
+
+class TaskType(str, Enum):
+    FEATURE = "feature"
+    FIX = "fix"
+    REFACTOR = "refactor"
+    MAINTENANCE = "maintenance"
 
 
 class Epic(Base):
     __tablename__ = "epics"
     
-    id: str = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    id: str = Column(String(6), primary_key=True, default=generate_task_id)
     name: str = Column(String(255), nullable=False, unique=True)
-    tag: str = Column(String(100), default="")
-    created_at: datetime = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     
     tasks = relationship("Task", back_populates="epic")
     
@@ -32,22 +44,21 @@ class Epic(Base):
         return {
             "id": self.id,
             "name": self.name,
-            "tag": self.tag,
-            "created_at": self.created_at.isoformat() if self.created_at else None,
         }
 
 
 class Task(Base):
     __tablename__ = "tasks"
     
-    id: str = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    name: str = Column(String(255), nullable=False, unique=True)
+    id: str = Column(String(6), primary_key=True, default=generate_task_id)
+    name: str = Column(String(255), nullable=False)
     file_name: str = Column(String(255), nullable=False)
     summary: str = Column(Text, default="")
-    status: TaskStatus = Column(SQLEnum(TaskStatus), default=TaskStatus.TODO)
+    type: TaskType = Column(SQLEnum(TaskType), default=TaskType.FEATURE)
+    status: TaskStatus = Column(SQLEnum(TaskStatus), default=TaskStatus.DRAFT)
     git_hash: str = Column(String(40), default="")
     completed_at: datetime = Column(DateTime, nullable=True)
-    epic_id: str = Column(String(36), ForeignKey("epics.id"), nullable=False)
+    epic_id: str = Column(String(6), ForeignKey("epics.id"), nullable=True)
     created_at: datetime = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     
     epic = relationship("Epic", back_populates="tasks")
@@ -55,7 +66,7 @@ class Task(Base):
     @property
     def file_path(self) -> str:
         """Get relative path to task file."""
-        return f"moderails/tasks/{self.epic.name}/{self.file_name}"
+        return f".moderails/{self.file_name}"
     
     def to_dict(self) -> dict:
         return {
@@ -63,6 +74,7 @@ class Task(Base):
             "name": self.name,
             "file_name": self.file_name,
             "summary": self.summary,
+            "type": self.type.value,
             "status": self.status.value,
             "epic": self.epic.name if self.epic else None,
             "epic_id": self.epic_id,

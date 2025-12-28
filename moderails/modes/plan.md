@@ -8,17 +8,13 @@ Create executable TODO plan in the task file.
 
 ## WORKFLOW
 
-1. Read the task file
+1. Update each section in the task file
 
-2. Read `moderails/templates/task-template.md` for section descriptions
+2. Create atomic TODO LIST items
 
-3. Update each section in the task file
+3. Get user approval
 
-4. Create atomic TODO LIST items
-
-5. Get user approval
-
-6. When approved, suggest `#execute`
+4. When approved, suggest `#execute`
 
 ## PLANNING RULES
 - Edit the task file directly
@@ -33,6 +29,7 @@ Create executable TODO plan in the task file.
 ## FORBIDDEN
 - No implementation or code writing
 - No code samples in task files
+- No task status update 
 - No `todo_write` or internal TODO lists
 
 ---

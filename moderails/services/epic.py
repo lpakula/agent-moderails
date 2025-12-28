@@ -12,8 +12,9 @@ class EpicService:
     def __init__(self, session: Session):
         self.session = session
     
-    def create(self, name: str, tag: str = "") -> Epic:
-        epic = Epic(name=name, tag=tag)
+    def create(self, name: str) -> Epic:
+        # Epic names can now contain spaces
+        epic = Epic(name=name)
         self.session.add(epic)
         self.session.commit()
         self.session.refresh(epic)
@@ -28,23 +29,15 @@ class EpicService:
     def list_all(self) -> list[Epic]:
         return self.session.query(Epic).all()
     
-    def update(self, name: str, tag: Optional[str] = None) -> Optional[Epic]:
+    def update(self, name: str) -> Optional[Epic]:
+        """Update epic. Note: Epics are permanent containers and cannot be deleted."""
         epic = self.get_by_name(name)
         if not epic:
             return None
-        if tag is not None:
-            epic.tag = tag
+        # Epics only have name, nothing to update currently
         self.session.commit()
         self.session.refresh(epic)
         return epic
-    
-    def delete(self, name: str) -> bool:
-        epic = self.get_by_name(name)
-        if not epic:
-            return False
-        self.session.delete(epic)
-        self.session.commit()
-        return True
     
     def get_summary(self, name: str, short: bool = False) -> str:
         """

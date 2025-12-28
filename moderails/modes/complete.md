@@ -15,34 +15,36 @@ git branch --show-current
 **If on `main` branch: ASK USER TO CONFIRM before proceeding with commit.**  
 Wait for explicit confirmation. If user declines, STOP and suggest switching to a feature branch.
 
-2. Commit all changes:
+2. Review changes for this task:
 ```bash
-git add -A
-git commit -m "feat: <task-name> - <brief description>"
+git status
+```
+Identify which files were changed as part of this task.
+
+3. Commit the code changes:
+```bash
+git add <file1> <file2> <file3>...
+git commit -m "<type>: <task-name> - <brief description>"
 ```
 
-3. Update task with status, summary, and git hash in one command:
+**Commit message format:**
+The commit message uses the task type directly:
+- Tasks with type "feature" → `feature: <description>`
+- Tasks with type "fix" → `fix: <description>`
+- Tasks with type "refactor" → `refactor: <description>`
+
+**Important:** 
+- Only stage files that are part of this task. Do NOT use `git add -A`
+- Do NOT include history.json yet (it will be committed by user later)
+
+4. Mark task as completed with summary:
 ```bash
-moderails task update --task <task> --status completed --summary "brief summary" --git-hash $(git rev-parse HEAD)
+moderails task complete --task <task-id> --summary "brief summary of what was done"
 ```
-
-## SUMMARY GUIDELINES
-Write a brief summary that captures:
-- What was implemented
-- Key changes made
-- Any notable decisions
-
-This summary becomes part of the epic context for future tasks.
-
-## GIT COMMIT MESSAGE
-Use conventional commits format:
-- `feat: <description>` for new features
-- `fix: <description>` for bug fixes
-- `refactor: <description>` for refactoring
+**Task summary:** Write a brief summary that captures what was implemented, key changes made, and any notable decisions. 
 
 ## FORBIDDEN
-- **NEVER commit task files** (`moderails/tasks/` is in .gitignore)
-
+- **commit task files** (`.moderails/tasks/` is in .gitignore)
 
 ---
 **YOU MUST FOLLOW THE WORKFLOW**

@@ -11,9 +11,9 @@ Implement EXACTLY what's in the TODO list. One item at a time.
 
 ## WORKFLOW
 
-1. Update task status to in-progress:
+1. If task status is `draft`, update to `in-progress`:
 ```bash
-moderails task update --task <task> --status in-progress
+moderails task update --task <task-id> --status in-progress
 ```
 
 2. Read the task file to fetch fresh TODO list
@@ -29,6 +29,8 @@ moderails task update --task <task> --status in-progress
    d) **STOP and WAIT** for user confirmation before continuing
    
    e) After confirmation, repeat loop for next TODO item
+   
+   **💡 Batch Mode:** Advise user about `--no-confirmation` batch mode.
 
 4. When all TODOs are `[x]`, suggest switching to `#complete` mode
 
@@ -40,20 +42,14 @@ moderails task update --task <task> --status in-progress
 - On next iteration, read the file again to find the next `[ ]` item
 
 ## PERMITTED
-- Execute ONE TODO item at a time
-- Mark that item as `[x]` in task file
-- Make minimal changes per plan
 - Edit task file directly (mark complete, add notes)
+- Modify the plan (add/remove/edit TODO items) ONLY when user explicitly requests it
 
 ## FORBIDDEN
-- **NEVER work on multiple TODO items in one response**
-- **NEVER proceed to next TODO without user confirmation**
 - No new tasks beyond TODO list
-- No refactors or optimizations
 - No creative additions
 
 ## BATCH MODE OVERRIDE
-
 If user message contains `--no-confirmation` flag:
 - Work through ALL TODO items sequentially
 - Mark each as `[x]` as you complete them

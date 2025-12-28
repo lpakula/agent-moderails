@@ -1,0 +1,34 @@
+# Development
+
+## Setup
+
+```bash
+# Clone and install in dev mode
+git clone https://github.com/lpakula/agent-moderails.git
+cd agent-moderails
+pipx install -e .
+
+# Run
+moderails --help
+```
+
+Changes are reflected immediately — no reinstall needed.
+
+## Running Tests
+
+The project includes a comprehensive test suite covering all CLI commands and core functionality:
+
+```bash
+# Run all tests in Docker (recommended)
+./scripts/test.sh
+
+# Run specific test file
+./scripts/test.sh tests/test_cli.py
+
+# Run specific test
+./scripts/test.sh tests/test_cli.py::TestInitCommand::test_init_success
+
+# Rebuild image (after updating dependencies in pyproject.toml)
+./scripts/test.sh --rebuild
+```
+
