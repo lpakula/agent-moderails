@@ -54,6 +54,8 @@ moderails epic update --epic <epic-id> --name "New Epic Name"
 ## Context Management
 
 ```bash
+# Load mandatory context
+moderails context load
 # Load task context
 moderails task load --task <task-id>  
 # Search context

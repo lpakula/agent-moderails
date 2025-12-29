@@ -524,6 +524,25 @@ def context(ctx):
 
 
 
+@context.command("load")
+@click.pass_context
+def context_load(ctx):
+    """Load and display mandatory context files."""
+    services = get_services_or_exit(ctx)
+    moderails_dir = get_moderails_dir(ctx.obj.get("db_path"))
+    
+    # Load mandatory context
+    mandatory_context = services["context"].load_mandatory_context()
+    
+    if not mandatory_context:
+        click.echo("No mandatory context files found.")
+        click.echo(f"\nAdd markdown files to: {moderails_dir / 'context' / 'mandatory'}/")
+        return
+    
+    # Display formatted context (same as task create/load)
+    click.echo(mandatory_context)
+
+
 @context.command("search")
 @click.option("--query", "-q", help="Search query for context files and task history")
 @click.option("--file", "-f", help="File path to search tasks by file")

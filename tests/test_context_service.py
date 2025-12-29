@@ -58,6 +58,8 @@ class TestContextService:
         assert "### style.md" in result
         assert "Use MVC pattern" in result
         assert "Use 2 spaces" in result
+        # Verify separator between files
+        assert "\n---\n" in result
     
     def test_load_mandatory_context_sorted(self, temp_dir):
         """Test that files are loaded in sorted order."""

@@ -28,12 +28,17 @@ class ContextService:
         # Build context output
         context_parts = ["## MANDATORY CONTEXT\n"]
         
-        for file_path in context_files:
+        for i, file_path in enumerate(context_files):
             try:
                 content = file_path.read_text()
                 context_parts.append(f"### {file_path.name}\n")
                 context_parts.append(content)
-                context_parts.append("\n")
+                
+                # Add separator between files (but not after the last one)
+                if i < len(context_files) - 1:
+                    context_parts.append("\n---\n")
+                else:
+                    context_parts.append("\n")
             except Exception:
                 # Skip files that can't be read
                 continue
