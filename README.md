@@ -67,17 +67,18 @@ Then in your editor:
 
 **And that's it!** The agent will guide you step-by-step through the workflow for your next task:
 ```
-🔍 Research → 📋 Plan → ⚡ Execute → ✅ Complete
+🔍 Research → 📋 Plan → 🔨 Execute → ✅ Complete
 ```
 
 **🔍 Research** — Understand the task  
 **📋 Plan** — Define what will be done  
-**⚡ Execute** — Implement the plan  
+**🔨 Execute** — Implement the plan  
 **✅ Complete** — Finish the task
 
 **Optional:**  
 **💡 Brainstorm** — Explore alternative approaches after the research  
-**❌ Abort** — Abandon task and reset changes
+**❌ Abort** — Abandon task and reset changes  
+**⚡ Fast** — Context memory without the protocol (for small tasks and bug fixes)
 
 ---
 

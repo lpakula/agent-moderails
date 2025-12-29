@@ -41,6 +41,7 @@ moderails sync
 | PLAN | `#plan` | Create TODO list in task file |
 | EXECUTE | `#execute` | Implement TODO items one by one |
 | COMPLETE | `#complete` | Mark task done, commit |
+| FAST | `#fast` | (Optional) Quick iterations without protocol |
 | ABORT | `#abort` | Abandon task, reset git |
 
 ## MODE SWITCHING

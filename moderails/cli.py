@@ -475,7 +475,7 @@ def epic_list(ctx):
 @click.pass_context
 def mode(ctx, name: str):
     """Get mode definition. Use when switching modes (e.g., //execute)."""
-    valid_modes = ["research", "brainstorm", "plan", "execute", "complete", "abort"]
+    valid_modes = ["fast", "research", "brainstorm", "plan", "execute", "complete", "abort"]
     if name not in valid_modes:
         click.echo(f"❌ Invalid mode. Valid modes: {', '.join(valid_modes)}")
         return

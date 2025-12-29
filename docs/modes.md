@@ -3,7 +3,7 @@
 Modes define clear boundaries — no skipping ahead, no mixing phases.
 
 ```
-🔍 Research → 📋 Plan → ⚡ Execute → ✅ Complete
+🔍 Research → 📋 Plan → 🔨 Execute → ✅ Complete
 ```
 
 ## 🏁 Start
@@ -42,7 +42,7 @@ Optional. Use if you want to explore alternative approaches to what was agreed i
 
 The agent breaks down the work into atomic TODO items in the task file. Review and approve before moving to execution.
 
-## ⚡ Execute
+## 🔨 Execute
 
 ```
 #execute
@@ -61,6 +61,16 @@ Implement TODO items one by one. Mark each item complete `[x]` in the task file.
 ```
 
 Mark task as completed, commit changes with conventional commit message. Git hash is stored locally for diff retrieval. 
+
+## ⚡ Fast (optional)
+
+```
+#fast
+```
+
+Context-aware coding without the protocol. Access the same context memory system (mandatory context, searchable context, task history) but skip the structured workflow.
+
+Best for small tasks, bug fixes, and quick iterations where you want memory benefits without mode switching.
 
 ## ❌ Abort (optional)
 
