@@ -7,7 +7,7 @@ Modal control system for AI agents.
 ```
 # Task Management
 moderails list [--status <draft|in-progress|completed>]
-moderails task create --name "Task Name" [--epic <epic-id>] [--type feature|fix|refactor|maintenance]
+moderails task create --name "Task Name" [--epic <epic-id>] [--type feature|fix|refactor|chore]
 moderails task load --task <task-id>
 moderails task complete --task <task-id> [--summary <text>]
 moderails task update --task <task-id> --status <status> | --summary <text>
@@ -65,9 +65,9 @@ moderails mode --name execute
 2. Wait for user's description
 3. Based on the description, propose:
    - A task name
-   - Task type (feature/fix/refactor/maintenance)
+   - Task type (feature/fix/refactor/chore)
 4. Check existing epics with `moderails epic list` and suggest one if related, or suggest creating a new epic if appropriate
-5. Create task: `moderails task create --name "Task name" [--type feature|fix|refactor|maintenance] [--epic <epic-id>]`
+5. Create task: `moderails task create --name "Task name" [--type feature|fix|refactor|chore] [--epic <epic-id>]`
    - If creating new epic: first run `moderails epic create --name "epic-name"` to get epic ID
    - Type defaults to "feature" if not specified
 6. Advise user to type `#research` to begin initial analysis

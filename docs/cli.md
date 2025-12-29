@@ -29,7 +29,7 @@ moderails epic list
 
 ```bash
 # Create task
-moderails task create --name "Task Name" [--type feature|fix|refactor|maintenance] [--epic <epic-id>]
+moderails task create --name "Task Name" [--type feature|fix|refactor|chore] [--epic <epic-id>]
 # Complete task
 moderails task complete --task <task-id> [--summary <text>]
 ```

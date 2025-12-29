@@ -181,7 +181,7 @@ def task(ctx):
 @task.command("create")
 @click.option("--name", "-n", required=True, help="Task name")
 @click.option("--epic", "-e", help="Epic ID (6-character, optional)")
-@click.option("--type", "-t", type=click.Choice(["feature", "fix", "refactor", "maintenance"]), default="feature", help="Task type (default: feature)")
+@click.option("--type", "-t", type=click.Choice(["feature", "fix", "refactor", "chore"]), default="feature", help="Task type (default: feature)")
 @click.pass_context
 def task_create(ctx, name: str, epic: Optional[str], type: str):
     """Create a new task."""

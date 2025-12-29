@@ -29,7 +29,7 @@ class TaskType(str, Enum):
     FEATURE = "feature"
     FIX = "fix"
     REFACTOR = "refactor"
-    MAINTENANCE = "maintenance"
+    CHORE = "chore"
 
 
 class Epic(Base):
