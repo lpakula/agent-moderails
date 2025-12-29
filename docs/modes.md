@@ -52,6 +52,8 @@ Implement TODO items one by one. Mark each item complete `[x]` in the task file.
 
 > Type `--no-confirmation` to work through all TODOs without stopping for confirmation between items.
 
+**Adjusting the plan:** No plan is perfect. You can adjust the approach along the way — add items, modify steps, or change direction. All changes are recorded in the task file, which remains the single source of truth throughout execution.
+
 ## ✅ Complete
 
 ```
