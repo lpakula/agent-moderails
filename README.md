@@ -38,6 +38,8 @@ ModeRails gives you a complete protocol for multi-session development
 
 **Use it when you want it:** ModeRails is opt-in. Initialize with `/moderails` only for tasks where you need structure and persistence. Keep using regular chat or Plan mode for quick experiments.
 
+> **Don't want the protocol but still want persistent memory and context loading?** Use **Fast mode** (`#fast`) for context-aware coding without the structured workflow.
+
 ---
 
 ## 📦 Installation
