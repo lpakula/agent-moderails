@@ -38,7 +38,7 @@ ModeRails gives you a complete protocol for multi-session development
 
 **ModeRails is opt-in, not mandatory.** You choose when to use it:
 
-- **For structured work**: Initialise the protocol with `/moderails` command to follow the full protocol
+- **For structured work**: Initialise the protocol with `/moderails` command and follow the full protocol
 - **For small tasks & bug fixes**: Use **Fast mode** (`#fast`) — get persistent memory and context loading without the protocol
 - **No need for better context and enhanced agent cooperation?** Keep using regular chat
 
