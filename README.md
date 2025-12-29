@@ -36,9 +36,11 @@ ModeRails gives you a complete protocol for multi-session development
 - **Explicit mode boundaries** — research can't write code, execute must follow the plan
 - **Enforced workflow** — prevents scope creep and direction changes mid-implementation
 
-**Use it when you want it:** ModeRails is opt-in. Initialize with `/moderails` only for tasks where you need structure and persistence. Keep using regular chat or Plan mode for quick experiments.
+**ModeRails is opt-in, not mandatory.** You choose when to use it:
 
-> **Don't want the protocol but still want persistent memory and context loading?** Use **Fast mode** (`#fast`) for context-aware coding without the structured workflow.
+- **For structured work**: Use `/moderails` to follow the full protocol
+- **For small tasks & bug fixes**: Use **Fast mode** (`#fast`) — get persistent memory and context loading without the protocol
+- **No need for better context and agent cooperation?** Keep using regular chat
 
 ---
 
