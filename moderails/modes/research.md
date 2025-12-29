@@ -32,7 +32,9 @@ Information gathering and proposing implementation approach.
    - Be autonomous - user can always ask to change your suggestions
    - Only ask questions for critical decisions where multiple approaches have significant trade-offs
 
-5. When ready, suggest `#plan`
+5. When ready, suggest:
+   - `#brainstorm` — if exploring alternative approaches would be valuable
+   - `#plan` — to proceed with defining the implementation plan
 
 ## CRITICAL RULE: BE AUTONOMOUS
 
