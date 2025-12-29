@@ -47,18 +47,5 @@ Best for small tasks, bug fixes, and quick iterations where you want context-awa
 - Don't follow formal protocol workflows
 - Don't spend time on extensive planning (unless user requests it)
 
-## RETURNING TO FULL PROTOCOL
-
-When the work grows beyond a quick fix, suggest:
-```
-This is becoming more complex. Would you like to:
-1. Continue in Fast mode
-2. Create a task and use #research → #plan → #execute workflow
-```
-
----
-
-**Fast mode trades structure for speed. Use it wisely for small, contained work.**
-
 **YOU MUST FOLLOW THE WORKFLOW**
 
