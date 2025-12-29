@@ -94,7 +94,9 @@ class TaskService:
     def update(
         self,
         task_id: str,
+        name: Optional[str] = None,
         status: Optional[TaskStatus] = None,
+        task_type: Optional[TaskType] = None,
         summary: Optional[str] = None,
         git_hash: Optional[str] = None,
     ) -> Optional[Task]:
@@ -102,10 +104,14 @@ class TaskService:
         if not task:
             return None
         
+        if name is not None:
+            task.name = name
         if status:
             task.status = status
             if status == TaskStatus.COMPLETED:
                 task.completed_at = datetime.now(timezone.utc)
+        if task_type is not None:
+            task.type = task_type
         if summary is not None:
             task.summary = summary
         if git_hash:

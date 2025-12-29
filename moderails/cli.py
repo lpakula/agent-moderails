@@ -100,6 +100,7 @@ def init(ctx):
             click.echo(click.style("Example commands:", fg="white", bold=True))
             click.echo()
             click.echo(f"  {click.style('moderails list', fg='green')} - See all tasks")
+            click.echo(f"  {click.style('moderails epic list', fg='green')} - See all epics")
             click.echo()
             click.echo(click.style("💡 Tip:", fg="blue") + " Run 'moderails --help' for more")
             click.echo()
@@ -227,22 +228,25 @@ def task_create(ctx, name: str, epic: Optional[str], type: str):
 
 @task.command("update")
 @click.option("--task", "-t", "task_id", required=True, help="Task ID (6-character)")
+@click.option("--name", help="New task name")
 @click.option("--status", "-s", type=click.Choice(["draft", "in-progress", "completed"]))
+@click.option("--type", type=click.Choice(["feature", "fix", "refactor", "chore"]), help="New task type")
 @click.option("--summary", help="Task summary")
 @click.option("--git-hash", help="Git commit hash")
 @click.pass_context
-def task_update(ctx, task_id: str, status: Optional[str], summary: Optional[str], git_hash: Optional[str]):
-    """Update task status, summary, or git hash."""
+def task_update(ctx, task_id: str, name: Optional[str], status: Optional[str], type: Optional[str], summary: Optional[str], git_hash: Optional[str]):
+    """Update task name, status, type, summary, or git hash."""
     services = get_services_or_exit(ctx)
     
     status_enum = TaskStatus(status) if status else None
-    t = services["task"].update(task_id, status=status_enum, summary=summary, git_hash=git_hash)
+    type_enum = TaskType(type) if type else None
+    t = services["task"].update(task_id, name=name, status=status_enum, task_type=type_enum, summary=summary, git_hash=git_hash)
     
     if not t:
         click.echo(f"❌ Task '{task_id}' not found")
         return
     
-    click.echo(f"✅ Updated task: {t.id} - {t.name} [{t.status.value}]")
+    click.echo(f"✅ Updated task: {t.id} - {t.name} [{t.type.value}] [{t.status.value}]")
     
     if status == "completed":
         click.echo("\n💡 Now commit your changes with a descriptive message")

@@ -10,7 +10,7 @@ moderails list [--status <draft|in-progress|completed>]
 moderails task create --name "Task Name" [--epic <epic-id>] [--type feature|fix|refactor|chore]
 moderails task load --task <task-id>
 moderails task complete --task <task-id> [--summary <text>]
-moderails task update --task <task-id> --status <status> | --summary <text>
+moderails task update --task <task-id> [--name <name>] [--status <status>] [--type <type>] [--summary <text>]
 
 # Epic Management
 moderails epic list
