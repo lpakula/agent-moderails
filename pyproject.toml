@@ -24,17 +24,17 @@ classifiers = [
     "Topic :: Software Development :: User Interfaces",
 ]
 
-[project.urls]
-Homepage = "https://github.com/lpakula/agent-moderails"
-Repository = "https://github.com/lpakula/agent-moderails"
-Documentation = "https://github.com/lpakula/agent-moderails#readme"
-Issues = "https://github.com/lpakula/agent-moderails/issues"
-
 dependencies = [
     "click>=8.1.0",
     "sqlalchemy>=2.0.0",
     "rich>=13.0.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/lpakula/agent-moderails"
+Repository = "https://github.com/lpakula/agent-moderails"
+Documentation = "https://github.com/lpakula/agent-moderails#readme"
+Issues = "https://github.com/lpakula/agent-moderails/issues"
 
 [project.optional-dependencies]
 dev = [
@@ -47,9 +47,6 @@ moderails = "moderails.cli:cli"
 
 [tool.hatch.build.targets.wheel]
 packages = ["moderails"]
-
-[tool.hatch.build.targets.wheel.force-include]
-"moderails/modes" = "moderails/modes"
 
 [tool.hatch.build]
 include = [

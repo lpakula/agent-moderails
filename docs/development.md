@@ -32,3 +32,21 @@ The project includes a comprehensive test suite covering all CLI commands and co
 ./scripts/test.sh --rebuild
 ```
 
+## Database Migrations
+
+When you modify the database schema, add a new migration in `moderails/db/migrations.py`:
+
+```python
+# moderails/db/migrations.py
+MIGRATIONS = {
+    1: """...""",  # Initial schema
+    2: """
+        -- Add priority field to tasks
+        ALTER TABLE tasks ADD COLUMN priority TEXT;
+    """,  # Your new migration
+}
+```
+**Testing:**
+```bash
+moderails start  # Auto-runs pending migrations
+```

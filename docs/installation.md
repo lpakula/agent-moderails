@@ -10,6 +10,14 @@ curl -fsSL https://raw.githubusercontent.com/lpakula/agent-moderails/main/script
 pipx install git+https://github.com/lpakula/agent-moderails
 ```
 
+## Upgrade
+
+```bash
+pipx upgrade moderails
+```
+
+Your tasks and history are preserved during upgrades.
+
 ## Setup
 
 ```bash

@@ -3,7 +3,7 @@
 ![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)
 ![License MIT](https://img.shields.io/badge/license-MIT-green.svg)
 ![CLI](https://img.shields.io/badge/cli-pipx-orange.svg)
-![Coverage](https://img.shields.io/badge/coverage-86%25-brightgreen.svg)
+![Coverage](https://img.shields.io/badge/coverage-73%25-brightgreen.svg)
 
 **Plan Mode on steroids** — structured agent workflow with persistent memory.
 
@@ -40,6 +40,11 @@ Plan mode helps you think before acting — but it's session-limited. Close the 
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/lpakula/agent-moderails/main/scripts/install.sh | bash
+```
+
+**Upgrade:**
+```bash
+pipx upgrade moderails
 ```
 
 ## 🚀 Quickstart

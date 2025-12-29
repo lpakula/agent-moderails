@@ -49,6 +49,27 @@ def get_services_or_exit(ctx):
         ctx.exit(0)
 
 
+def check_and_migrate():
+    """Check and run database migrations if needed.
+    
+    Returns:
+        True if migrations were run, False otherwise
+    """
+    try:
+        from moderails.db.database import find_db_path
+        from moderails.db.migrations import auto_migrate
+        
+        db_path = find_db_path()
+        if db_path:
+            migrated = auto_migrate(db_path)
+            if migrated:
+                click.echo("✓ Database migrated to latest schema")
+                return True
+        return False
+    except Exception:
+        return False
+
+
 @click.group()
 @click.version_option(version=__version__, prog_name="moderails", message="%(prog)s version %(version)s")
 @click.pass_context
@@ -115,6 +136,10 @@ def init(ctx):
 @click.pass_context
 def start(ctx):
     """Show protocol overview and current status with agent guidance."""
+    # Auto-migrate database if needed (before showing status)
+    if check_and_migrate():
+        click.echo()  # Add blank line after migration message
+    
     # Print protocol overview with CLI commands
     click.echo(get_mode("start"))
     click.echo("\n---\n")

@@ -6,7 +6,6 @@ from typing import Optional
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
-from .models import Base
 from ..config import find_config_path, get_db_path as config_get_db_path, save_config
 from ..templates import get_template_path
 
@@ -51,9 +50,9 @@ def init_db() -> Path:
     # Create directory if needed
     db_path.parent.mkdir(parents=True, exist_ok=True)
     
-    # Create engine and tables
-    engine = create_engine(f"sqlite:///{db_path}", echo=False)
-    Base.metadata.create_all(engine)
+    # Initialize database schema with migrations
+    from .migrations import init_schema
+    init_schema(db_path)
     
     # Create .gitignore in moderails directory
     gitignore_path = db_path.parent / ".gitignore"
