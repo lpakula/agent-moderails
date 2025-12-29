@@ -46,7 +46,8 @@ MIGRATIONS = {
     """,  # Your new migration
 }
 ```
-**Testing:**
+
+**Testing migrations:**
 ```bash
-moderails start  # Auto-runs pending migrations
+moderails migrate  # Run migrations manually
 ```

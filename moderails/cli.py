@@ -130,6 +130,36 @@ def init(ctx):
         return
 
 
+# ============== MIGRATE ==============
+
+@cli.command()
+@click.pass_context
+def migrate(ctx):
+    """Run database migrations to latest schema version."""
+    from moderails.db.database import find_db_path
+    from moderails.db.migrations import get_schema_version, CURRENT_VERSION
+    
+    db_path = find_db_path()
+    if not db_path:
+        click.echo(click.style("✗ No database found. Run: moderails init", fg="red"))
+        ctx.exit(1)
+    
+    current = get_schema_version(db_path)
+    click.echo(f"Current schema version: {current}")
+    click.echo(f"Latest schema version: {CURRENT_VERSION}")
+    
+    if current < CURRENT_VERSION:
+        click.echo("\nApplying migrations...")
+        migrated = check_and_migrate()
+        if migrated:
+            click.echo(click.style("✓ Database migrated successfully", fg="green"))
+        else:
+            click.echo(click.style("✗ Migration failed", fg="red"))
+            ctx.exit(1)
+    else:
+        click.echo(click.style("✓ Database is up to date", fg="green"))
+
+
 # ============== START ==============
 
 @cli.command()

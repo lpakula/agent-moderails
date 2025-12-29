@@ -14,6 +14,9 @@ pipx install git+https://github.com/lpakula/agent-moderails
 
 ```bash
 pipx upgrade moderails
+
+# Or manual
+pipx install --force git+https://github.com/lpakula/agent-moderails
 ```
 
 Your tasks and history are preserved during upgrades.

@@ -14,6 +14,8 @@ moderails init
 moderails start
 # Get mode definition
 moderails mode --name <mode>
+# Run database migrations
+moderails migrate
 ```
 
 ## Listing

@@ -5,6 +5,7 @@ from click.testing import CliRunner
 from pathlib import Path
 
 from moderails.cli import cli
+from moderails.db.migrations import set_schema_version, CURRENT_VERSION
 
 
 @pytest.fixture
@@ -226,4 +227,49 @@ class TestEpicCommands:
             
             assert result.exit_code == 0
             assert "Created epic" in result.output
+
+
+class TestMigrateCommand:
+    """Tests for migrate command."""
+    
+    def test_migrate_no_database(self, cli_runner):
+        """Test migrate command when no database exists."""
+        with cli_runner.isolated_filesystem():
+            result = cli_runner.invoke(cli, ['migrate'])
+            
+            assert result.exit_code == 1
+            assert "No database found" in result.output
+            assert "moderails init" in result.output
+    
+    def test_migrate_up_to_date(self, cli_runner):
+        """Test migrate command when database is already up to date."""
+        with cli_runner.isolated_filesystem():
+            # Initialize database
+            cli_runner.invoke(cli, ['init'])
+            
+            result = cli_runner.invoke(cli, ['migrate'])
+            
+            assert result.exit_code == 0
+            assert f"Current schema version: {CURRENT_VERSION}" in result.output
+            assert f"Latest schema version: {CURRENT_VERSION}" in result.output
+            assert "Database is up to date" in result.output
+    
+    def test_migrate_needs_migration(self, cli_runner):
+        """Test migrate command when migration is needed."""
+        with cli_runner.isolated_filesystem():
+            # Initialize database
+            cli_runner.invoke(cli, ['init'])
+            
+            # Downgrade schema version to simulate old database
+            db_path = Path.cwd() / ".moderails" / "moderails.db"
+            old_version = CURRENT_VERSION - 1 if CURRENT_VERSION > 1 else 0
+            set_schema_version(db_path, old_version)
+            
+            result = cli_runner.invoke(cli, ['migrate'])
+            
+            assert result.exit_code == 0
+            assert f"Current schema version: {old_version}" in result.output
+            assert f"Latest schema version: {CURRENT_VERSION}" in result.output
+            assert "Applying migrations" in result.output
+            assert "Database migrated successfully" in result.output
 

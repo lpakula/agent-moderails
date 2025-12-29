@@ -42,7 +42,8 @@ Plan mode helps you think before acting — but it's session-limited. Close the 
 curl -fsSL https://raw.githubusercontent.com/lpakula/agent-moderails/main/scripts/install.sh | bash
 ```
 
-**Upgrade:**
+## 📥 Upgrade
+
 ```bash
 pipx upgrade moderails
 ```
