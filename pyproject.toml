@@ -8,6 +8,28 @@ version = "0.1.0"
 description = "Structured agent workflow with persistent memory"
 readme = "README.md"
 requires-python = ">=3.11"
+license = {text = "MIT"}
+authors = [
+    {name = "Lukasz Pakula"}
+]
+keywords = ["ai", "agent", "workflow", "cli", "memory", "modes"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Software Development :: User Interfaces",
+]
+
+[project.urls]
+Homepage = "https://github.com/lpakula/agent-moderails"
+Repository = "https://github.com/lpakula/agent-moderails"
+Documentation = "https://github.com/lpakula/agent-moderails#readme"
+Issues = "https://github.com/lpakula/agent-moderails/issues"
+
 dependencies = [
     "click>=8.1.0",
     "sqlalchemy>=2.0.0",

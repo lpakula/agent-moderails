@@ -50,7 +50,7 @@ def get_services_or_exit(ctx):
 
 
 @click.group()
-@click.version_option(version=__version__, prog_name="moderails")
+@click.version_option(version=__version__, prog_name="moderails", message="%(prog)s version %(version)s")
 @click.pass_context
 def cli(ctx):
     """moderails - structured agent workflow with persistent memory."""
