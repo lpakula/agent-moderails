@@ -17,22 +17,26 @@ Inspired by the [RIPER-5 protocol](https://forum.cursor.com/t/i-created-an-amazi
 
 Most AI coding agents fail not because they're weak, but because they work without structure.
 
-**Without a protocol, agents tend to:**
-- Jump straight into coding
-- Mix thinking, planning, and execution
-- Change direction mid-task
-- Forget earlier decisions
-- Lose context in longer sessions
+**Plan mode helps you think before acting — but it has limits:**
+- Context is lost when the chat closes
+- No task history to learn from
+- Can't resume work days later with full context
+- No git integration to track what was actually implemented
 
-This works for tiny prompts — but breaks down for real projects.
+This works for small isolated tasks — but breaks down for real projects.
 
-**ModeRails fixes this** by giving the agent:
-- **Explicit modes** with clear boundaries
-- **Persistent task memory** across sessions
-- **Enforced rules** — research can't write code, execute can't redesign
+**Why ModeRails?**
 
-**Why not just use Plan mode?**  
-Plan mode helps you think before acting — but it's session-limited. Close the chat and context is gone. ModeRails gives you persistent memory across sessions and auto-loads relevant context when you return.
+ModeRails gives you a complete protocol for multi-session development
+
+- **Persistent memory across sessions** — return to tasks days later with full context intact
+- **Searchable task history** — agent learns from past work and similar features
+- **Epic-based grouping** — organize related tasks under a single epic, with shared context
+- **Git integration** — captures diffs, file changes, and commit hashes for every completed task
+- **Explicit mode boundaries** — research can't write code, execute must follow the plan
+- **Enforced workflow** — prevents scope creep and direction changes mid-implementation
+
+**Use it when you want it:** ModeRails is opt-in. Initialize with `/moderails` only for tasks where you need structure and persistence. Keep using regular chat or Plan mode for quick experiments.
 
 ---
 
