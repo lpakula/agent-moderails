@@ -35,7 +35,7 @@ Best for small tasks, bug fixes, and quick iterations where you want context-awa
 
 ## SNAPSHOT WORKFLOW (OPTIONAL)
 
-If the user types `--snapshot`, create a task history entry and structured commit in one go:
+If the user types `--snapshot`, preserve your work in task history for future context searches. Create a task entry and structured commit in one go:
 
 1. Create task with `in-progress` status, skip file and context:
 ```sh
@@ -60,7 +60,7 @@ moderails task complete --task <task-id> --summary "<brief summary>"
 ```
 This captures the git hash and exports to history.
 
-**Result**: Structured commit with proper history tracking, without leaving Fast mode or creating plan files.
+**Result**: Structured commit with searchable task history preserved for future context, without leaving Fast mode or creating plan files.
 
 ## PERMITTED
 

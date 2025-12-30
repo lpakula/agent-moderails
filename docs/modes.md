@@ -75,7 +75,7 @@ Best for small tasks, bug fixes, and quick iterations where you want memory bene
 
 
 >[!TIP]
-> Type `--snapshot` to create a structured commit with task history in one go, without leaving Fast mode.
+> Want to preserve your Fast mode work in task history for future context? Type `--snapshot` to create a structured commit with task entry that will be searchable later, all without leaving Fast mode.
 
 ## ❌ Abort (optional)
 
