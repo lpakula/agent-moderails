@@ -24,8 +24,19 @@ class TaskService:
         epic_id: Optional[str] = None,
         summary: str = "",
         task_type: TaskType = TaskType.FEATURE,
+        status: TaskStatus = TaskStatus.DRAFT,
+        create_file: bool = True,
     ) -> Task:
-        """Create a new task with its file. Epic is optional (provide epic ID). Both task and epic names can contain spaces."""
+        """Create a new task. Epic is optional (provide epic ID). Both task and epic names can contain spaces.
+        
+        Args:
+            name: Task name
+            epic_id: Optional epic ID
+            summary: Task summary
+            task_type: Task type (feature, fix, refactor, chore)
+            status: Initial task status
+            create_file: Whether to create the task plan file (default: True)
+        """
         
         # Validate epic if provided
         epic = None
@@ -41,7 +52,7 @@ class TaskService:
             summary=summary,
             type=task_type,
             epic_id=epic_id,
-            status=TaskStatus.DRAFT,
+            status=status,
         )
         self.session.add(task)
         self.session.flush()  # Get id without committing
@@ -62,12 +73,14 @@ class TaskService:
         
         task.file_name = file_name
         
-        task_dir.mkdir(parents=True, exist_ok=True)
-        task_file = task_dir / f"{filename_base}.plan.md"
-        
-        template = get_task_template()
-        content = template.format(name=name, summary=summary or "[task purpose]")
-        task_file.write_text(content)
+        # Only create file if requested
+        if create_file:
+            task_dir.mkdir(parents=True, exist_ok=True)
+            task_file = task_dir / f"{filename_base}.plan.md"
+            
+            template = get_task_template()
+            content = template.format(name=name, summary=summary or "[task purpose]")
+            task_file.write_text(content)
         
         self.session.commit()
         self.session.refresh(task)

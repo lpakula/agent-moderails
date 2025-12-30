@@ -31,7 +31,7 @@ moderails epic list
 
 ```bash
 # Create task
-moderails task create --name "Task Name" [--type feature|fix|refactor|chore] [--epic <epic-id>]
+moderails task create --name "Task Name" [--type feature|fix|refactor|chore] [--status draft|in-progress] [--epic <epic-id>] [--no-file] [--no-context]
 
 # Update task
 moderails task update --task <task-id> [--name <name>] [--status <status>] [--type <type>] [--summary <text>]
@@ -39,7 +39,6 @@ moderails task update --task <task-id> [--name <name>] [--status <status>] [--ty
 # Complete task
 moderails task complete --task <task-id> [--summary <text>]
 ```
-
 
 
 ## Epic Management

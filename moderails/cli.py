@@ -238,47 +238,68 @@ def task(ctx):
 @click.option("--name", "-n", required=True, help="Task name")
 @click.option("--epic", "-e", help="Epic ID (6-character, optional)")
 @click.option("--type", "-t", type=click.Choice(["feature", "fix", "refactor", "chore"]), default="feature", help="Task type (default: feature)")
+@click.option("--status", "-s", type=click.Choice(["draft", "in-progress"]), default="draft", help="Initial task status (default: draft)")
+@click.option("--no-file", is_flag=True, help="Skip task file creation")
+@click.option("--no-context", is_flag=True, help="Suppress context output")
 @click.pass_context
-def task_create(ctx, name: str, epic: Optional[str], type: str):
+def task_create(ctx, name: str, epic: Optional[str], type: str, status: str, no_file: bool, no_context: bool):
     """Create a new task."""
     services = get_services_or_exit(ctx)
     
-    # Load mandatory context
-    mandatory_context = services["context"].load_mandatory_context()
-    if mandatory_context:
-        click.echo(mandatory_context)
-        click.echo("\n---\n")
-    
-    # Load epic context if exists
+    # Validate epic first if provided
     epic_obj = None
     if epic:
         epic_obj = services["epic"].get(epic)
         if not epic_obj:
             click.echo(f"❌ Epic '{epic}' not found")
             return
-        
-        epic_summary = services["epic"].get_summary(epic_obj.name)
-        if epic_summary:
-            click.echo("## EPIC CONTEXT\n")
-            click.echo(epic_summary)
+    
+    # Load and display context unless suppressed
+    if not no_context:
+        # Load mandatory context
+        mandatory_context = services["context"].load_mandatory_context()
+        if mandatory_context:
+            click.echo(mandatory_context)
             click.echo("\n---\n")
+        
+        # Load epic context if exists
+        if epic_obj:
+            epic_summary = services["epic"].get_summary(epic_obj.name)
+            if epic_summary:
+                click.echo("## EPIC CONTEXT\n")
+                click.echo(epic_summary)
+                click.echo("\n---\n")
     
     try:
         task_type = TaskType(type)
-        task = services["task"].create(name=name, epic_id=epic if epic else None, task_type=task_type)
+        task_status = TaskStatus(status)
+        task = services["task"].create(
+            name=name, 
+            epic_id=epic if epic else None, 
+            task_type=task_type, 
+            status=task_status,
+            create_file=not no_file
+        )
         
+        # Always show task creation result
         click.echo(f"✅ Task created: {task.id} - {click.style(task.name, fg='green', bold=True)}")
         click.echo(f"   Type: {task.type.value}")
         if epic_obj:
-            click.echo(f"📁 Epic: {epic_obj.id} - {epic_obj.name}")
-        click.echo(f"📄 File: {task.file_path}")
-        click.echo(f"Status: {task.status.value}")
+            click.echo(f"   Epic: {epic_obj.id} - {epic_obj.name}")
+        click.echo(f"   Status: {task.status.value}")
         
-        click.echo("\n---\n")
-        click.echo("## AGENT GUIDANCE\n")
-        click.echo("User should type `#research` to begin working on this task.")
+        if not no_context:
+            if not no_file:
+                click.echo(f"   File: {task.file_path}")
+            click.echo("\n---\n")
+            click.echo("## AGENT GUIDANCE\n")
+            click.echo("User should type `#research` to begin working on this task.")
+        
+        # Return task for programmatic use (e.g., in snapshot workflow)
+        return task
     except ValueError as e:
         click.echo(f"❌ Error: {e}")
+        return None
 
 
 @task.command("update")

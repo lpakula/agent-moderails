@@ -72,6 +72,8 @@ Context-aware coding without the protocol. Access the same context memory system
 
 Best for small tasks, bug fixes, and quick iterations where you want memory benefits without mode switching.
 
+> **Snapshot feature**: Type `--snapshot` to create a structured commit with task history in one go, without leaving Fast mode.
+
 ## ❌ Abort (optional)
 
 ```
