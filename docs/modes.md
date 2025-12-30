@@ -50,6 +50,7 @@ The agent breaks down the work into atomic TODO items in the task file. Review a
 
 Implement TODO items one by one. Mark each item complete `[x]` in the task file.
 
+>[!TIP]
 > Type `--no-confirmation` to work through all TODOs without stopping for confirmation between items.
 
 **Adjusting the plan:** No plan is perfect. You can adjust the approach along the way — add items, modify steps, or change direction. All changes are recorded in the task file, which remains the single source of truth throughout execution.
@@ -72,7 +73,9 @@ Context-aware coding without the protocol. Access the same context memory system
 
 Best for small tasks, bug fixes, and quick iterations where you want memory benefits without mode switching.
 
-> **Snapshot feature**: Type `--snapshot` to create a structured commit with task history in one go, without leaving Fast mode.
+
+>[!TIP]
+> Type `--snapshot` to create a structured commit with task history in one go, without leaving Fast mode.
 
 ## ❌ Abort (optional)
 
