@@ -22,29 +22,6 @@ def _run_git(args: list[str], cwd: str = ".") -> Optional[str]:
         return None
 
 
-def get_current_commit_hash(repo_dir: Path) -> Optional[str]:
-    """
-    Get the current commit hash (HEAD).
-    
-    Args:
-        repo_dir: Repository directory
-    
-    Returns:
-        Full commit hash or None if not in a git repo or no commits
-    """
-    try:
-        result = subprocess.run(
-            ["git", "rev-parse", "HEAD"],
-            capture_output=True,
-            text=True,
-            check=True,
-            cwd=repo_dir
-        )
-        return result.stdout.strip()
-    except subprocess.CalledProcessError:
-        return None
-
-
 def get_commit_meta(hash: str, cwd: str = ".") -> tuple[str, str]:
     """
     Get commit hash and subject line.

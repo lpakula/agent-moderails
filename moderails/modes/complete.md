@@ -21,9 +21,19 @@ git status
 ```
 Identify which files were changed as part of this task.
 
-3. Commit the code changes:
+3. Mark task as completed with summary:
 ```bash
-git add <file1> <file2> <file3>...
+moderails task complete --task <task-id> --summary "brief summary of what was done"
+```
+**Task summary:** Write a brief summary that captures what was implemented, key changes made, and any notable decisions.
+
+**This will:**
+- Mark the task as completed in the database
+- Export the task to history.json 
+
+4. Commit the code changes AND history.json:
+```bash
+git add <file1> <file2> <file3>... history.json
 git commit -m "<type>: <task-name> - <brief description>"
 ```
 
@@ -34,14 +44,15 @@ The commit message uses the task type directly:
 - Tasks with type "refactor" → `refactor: <description>`
 
 **Important:** 
-- Only stage files that are part of this task. Do NOT use `git add -A`
-- Do NOT include history.json yet (it will be committed by user later)
+- Only stage files that are part of this task
+- MUST include history.json in the commit
+- Do NOT use `git add -A`
 
-4. Mark task as completed with summary:
+5. Update task with git hash:
 ```bash
-moderails task complete --task <task-id> --summary "brief summary of what was done"
+moderails task update --task <task-id> --git-hash $(git rev-parse HEAD)
 ```
-**Task summary:** Write a brief summary that captures what was implemented, key changes made, and any notable decisions. 
+This captures the commit hash for the completed work. 
 
 ## FORBIDDEN
 - **commit task files** (`.moderails/tasks/` is in .gitignore)

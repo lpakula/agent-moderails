@@ -15,7 +15,6 @@ from .services.history import HistoryService
 from .utils import (
     create_command_files,
     format_task_line,
-    get_current_commit_hash,
     search_context_files,
 )
 
@@ -350,29 +349,22 @@ def task_delete(ctx, task_id: str, confirm: bool):
 @click.option("--summary", "-s", help="Task summary")
 @click.pass_context
 def task_complete(ctx, task_id: str, summary: Optional[str]):
-    """Mark task as completed and export to history.json."""
+    """Mark task as completed"""
     services = get_services_or_exit(ctx)
-    moderails_dir = get_moderails_dir(ctx.obj.get("db_path"))
-    repo_dir = moderails_dir.parent
     
     try:
         # Update summary if provided
         if summary:
             services["task"].update(task_id, summary=summary)
         
-        # Capture git hash from HEAD (assumes user already committed)
-        git_hash = get_current_commit_hash(repo_dir)
-        
-        # Complete the task
-        task = services["task"].complete(task_id, git_hash=git_hash)
+        # Complete the task (without git hash - that comes later via task update)
+        task = services["task"].complete(task_id, git_hash=None)
         click.echo(f"✅ Task completed: {task.id} - {task.name}")
-        
-        if git_hash:
-            click.echo(f"✅ Captured git hash: {git_hash[:7]}")
         
         # Export to history.json
         services["history"].export_task(task_id)
         click.echo("✅ Exported to history.json")
+        click.echo("\n💡 Next: Commit your changes including history.json")
         
     except ValueError as e:
         click.echo(f"❌ {e}")
