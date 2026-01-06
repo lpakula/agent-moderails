@@ -39,26 +39,32 @@ If the user types `--snapshot`, preserve your work in task history for future co
 
 1. Create task with `in-progress` status, skip file and context:
 ```sh
-   moderails task create --name "<descriptive-task-name>" --type <feature|fix|refactor|chore> --status in-progress --no-file --no-context
+moderails task create --name "<descriptive-task-name>" --type <feature|fix|refactor|chore> --status in-progress --no-file --no-context
 ```
    Note the returned task ID. The `--no-file` flag skips task file creation and `--no-context` suppresses context output (no plan file needed for snapshots).
+
 2. Review changes for this task:
 ```bash
 git status
 ```
    Identify which files were changed as part of this task.
-3. Stage and commit all changes:
+
+3. Complete the task (exports to history.jsonl):
 ```sh
-git add <file1> <file2> <file3>...
+moderails task complete --task <task-id> --summary "<brief summary>"
+```
+
+4. Stage and commit changes including history.jsonl:
+```sh
+git add <file1> <file2> <file3>... history.jsonl
 git commit -m "<type>: <task-name> - <brief description>"
 ```
    Use conventional commit format matching the task type.
 
-4. Complete the task:
+5. Update task with git hash:
 ```sh
-moderails task complete --task <task-id> --summary "<brief summary>"
+moderails task update --task <task-id> --git-hash $(git rev-parse HEAD)
 ```
-This captures the git hash and exports to history.
 
 **Result**: Structured commit with searchable task history preserved for future context, without leaving Fast mode or creating plan files.
 
