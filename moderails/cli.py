@@ -30,7 +30,7 @@ def get_services(db_path: Optional[Path] = None):
     """Get services. Raises FileNotFoundError if database doesn't exist."""
     session = get_session(db_path)
     moderails_dir = get_moderails_dir(db_path)
-    history_file = moderails_dir / "history.json"
+    history_file = moderails_dir / "history.jsonl"
     return {
         "task": TaskService(session, moderails_dir),
         "epic": EpicService(session),
@@ -82,7 +82,7 @@ def cli(ctx):
         services = get_services(ctx.obj.get("db_path"))
         imported = services["history"].sync_from_file()
         if imported > 0:
-            click.echo(f"✓ Synced {imported} tasks from history.json", err=True)
+            click.echo(f"✓ Synced {imported} tasks from history.jsonl", err=True)
     except FileNotFoundError:
         pass  # DB doesn't exist yet, skip sync
 
@@ -361,10 +361,10 @@ def task_complete(ctx, task_id: str, summary: Optional[str]):
         task = services["task"].complete(task_id, git_hash=None)
         click.echo(f"✅ Task completed: {task.id} - {task.name}")
         
-        # Export to history.json
+        # Export to history.jsonl
         services["history"].export_task(task_id)
-        click.echo("✅ Exported to history.json")
-        click.echo("\n💡 Next: Commit your changes including history.json")
+        click.echo("✅ Exported to history.jsonl")
+        click.echo("\n💡 Next: Commit your changes including history.jsonl")
         
     except ValueError as e:
         click.echo(f"❌ {e}")
@@ -618,7 +618,7 @@ def context_search(ctx, query: Optional[str], file: Optional[str]):
 @click.option("--force", is_flag=True, help="Force sync even if file hasn't changed")
 @click.pass_context
 def sync(ctx, force: bool):
-    """Manually sync from history.json."""
+    """Manually sync from history.jsonl."""
     services = get_services_or_exit(ctx)
     
     if force:
@@ -627,7 +627,7 @@ def sync(ctx, force: bool):
     imported = services["history"].sync_from_file()
     
     if imported > 0:
-        click.echo(f"✅ Imported {imported} tasks from history.json")
+        click.echo(f"✅ Imported {imported} tasks from history.jsonl")
     else:
         click.echo("✓ Already in sync")
 

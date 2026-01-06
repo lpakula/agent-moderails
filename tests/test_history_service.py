@@ -13,7 +13,7 @@ class TestHistoryService:
     
     def test_sync_from_empty_file(self, test_db, temp_dir):
         """Test syncing when history file doesn't exist."""
-        history_file = temp_dir / "history.json"
+        history_file = temp_dir / "history.jsonl"
         service = HistoryService(test_db, history_file)
         
         imported = service.sync_from_file()
@@ -21,8 +21,8 @@ class TestHistoryService:
         assert imported == 0
     
     def test_sync_imports_tasks(self, test_db, temp_dir):
-        """Test importing tasks from history.json (JSON Lines format)."""
-        history_file = temp_dir / "history.json"
+        """Test importing tasks from history.jsonl (JSON Lines format)."""
+        history_file = temp_dir / "history.jsonl"
         
         # Create history file (one JSON object per line)
         tasks = [
@@ -58,12 +58,12 @@ class TestHistoryService:
         
         task2 = test_db.query(Task).filter(Task.name == "Test task 2").first()
         assert task2 is not None
-        # Epic is not imported from history.json (local-only)
+        # Epic is not imported from history.jsonl (local-only)
         assert task2.epic_id is None
     
     def test_sync_ignores_epic_from_history(self, test_db, temp_dir):
-        """Test that sync ignores epic field from history.json (epic_id is local-only)."""
-        history_file = temp_dir / "history.json"
+        """Test that sync ignores epic field from history.jsonl (epic_id is local-only)."""
+        history_file = temp_dir / "history.jsonl"
         
         task_data = {
             "name": "Task with epic in history",
@@ -79,14 +79,14 @@ class TestHistoryService:
         service = HistoryService(test_db, history_file)
         service.sync_from_file()
         
-        # Epic field in history.json is ignored (epic_id is local-only)
+        # Epic field in history.jsonl is ignored (epic_id is local-only)
         task = test_db.query(Task).filter(Task.name == "Task with epic in history").first()
         assert task is not None
         assert task.epic_id is None
     
     def test_sync_skips_existing_tasks(self, test_db, temp_dir):
         """Test that sync doesn't duplicate existing tasks."""
-        history_file = temp_dir / "history.json"
+        history_file = temp_dir / "history.jsonl"
         
         # Create task in DB
         task = Task(
@@ -122,7 +122,7 @@ class TestHistoryService:
     
     def test_sync_tracks_mtime(self, test_db, temp_dir):
         """Test that sync tracks file modification time."""
-        history_file = temp_dir / "history.json"
+        history_file = temp_dir / "history.jsonl"
         
         # Create empty history file
         history_file.touch()
@@ -137,8 +137,8 @@ class TestHistoryService:
         assert imported == 0  # Skipped because mtime unchanged
     
     def test_export_task(self, test_db, temp_dir):
-        """Test exporting a completed task to history.json (JSON Lines format)."""
-        history_file = temp_dir / "history.json"
+        """Test exporting a completed task to history.jsonl (JSON Lines format)."""
+        history_file = temp_dir / "history.jsonl"
         
         # Create completed task
         task = Task(
@@ -170,7 +170,7 @@ class TestHistoryService:
     
     def test_export_task_with_epic(self, test_db, temp_dir):
         """Test exporting task that belongs to an epic (epic not included in export)."""
-        history_file = temp_dir / "history.json"
+        history_file = temp_dir / "history.jsonl"
         
         # Create epic and task
         epic = Epic(name="test-epic")
@@ -197,13 +197,13 @@ class TestHistoryService:
         
         assert len(lines) == 1
         exported_task = json.loads(lines[0])
-        # Epic is NOT exported to history.json (local-only)
+        # Epic is NOT exported to history.jsonl (local-only)
         assert 'epic' not in exported_task
         assert exported_task['name'] == "Epic task"
     
     def test_export_task_extracts_files_changed(self, test_db, temp_dir):
         """Test that files_changed is extracted from git when git_hash is present."""
-        history_file = temp_dir / "history.json"
+        history_file = temp_dir / "history.jsonl"
         
         # Create task with a git hash (note: may be empty if not in git repo)
         task = Task(
@@ -230,7 +230,7 @@ class TestHistoryService:
     
     def test_export_task_not_found(self, test_db, temp_dir):
         """Test exporting non-existent task raises error."""
-        history_file = temp_dir / "history.json"
+        history_file = temp_dir / "history.jsonl"
         service = HistoryService(test_db, history_file)
         
         with pytest.raises(ValueError, match="not found"):
@@ -238,7 +238,7 @@ class TestHistoryService:
     
     def test_export_task_not_completed(self, test_db, temp_dir):
         """Test exporting incomplete task raises error."""
-        history_file = temp_dir / "history.json"
+        history_file = temp_dir / "history.jsonl"
         
         task = Task(
             name="Incomplete task",
@@ -255,7 +255,7 @@ class TestHistoryService:
     
     def test_export_task_idempotent(self, test_db, temp_dir):
         """Test that exporting same task twice doesn't duplicate."""
-        history_file = temp_dir / "history.json"
+        history_file = temp_dir / "history.jsonl"
         
         task = Task(
             name="Task",
@@ -280,7 +280,7 @@ class TestHistoryService:
     
     def test_search_by_file(self, test_db, temp_dir):
         """Test searching tasks by file path."""
-        history_file = temp_dir / "history.json"
+        history_file = temp_dir / "history.jsonl"
         
         # Create task with file in summary
         task = Task(
@@ -300,7 +300,7 @@ class TestHistoryService:
     
     def test_search_by_query(self, test_db, temp_dir):
         """Test searching tasks by keyword."""
-        history_file = temp_dir / "history.json"
+        history_file = temp_dir / "history.jsonl"
         
         # Create tasks
         task1 = Task(
@@ -332,7 +332,7 @@ class TestHistoryService:
     
     def test_search_case_insensitive(self, test_db, temp_dir):
         """Test search is case-insensitive."""
-        history_file = temp_dir / "history.json"
+        history_file = temp_dir / "history.jsonl"
         
         task = Task(
             name="Task",

@@ -44,7 +44,7 @@ Automatically loaded when working on a task that belongs to an epic. This gives 
 
 ## Task History
 
-Metadata from all completed tasks is preserved in `history.json`, creating a searchable knowledge base that the agent can use during research.
+Metadata from all completed tasks is preserved in `history.jsonl`, creating a searchable knowledge base that the agent can use during research.
 
 **When it's loaded:**  
 The agent searches this history on-demand during `#research` mode when it needs context about past work, similar features, or specific file changes.

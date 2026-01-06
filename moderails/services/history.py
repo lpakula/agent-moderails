@@ -1,4 +1,4 @@
-"""History service - manages history.json exports and imports."""
+"""History service - manages history.jsonl exports and imports."""
 
 import json
 from datetime import datetime
@@ -18,7 +18,7 @@ class HistoryService:
         self._last_mtime: Optional[float] = None
     
     def sync_from_file(self) -> int:
-        """Import completed tasks from history.json to DB.
+        """Import completed tasks from history.jsonl to DB.
         
         History file format: one JSON object per line (JSON Lines).
         
@@ -54,7 +54,7 @@ class HistoryService:
                 if existing_task:
                     continue
                 
-                # Epic is not stored in history.json (local only)
+                # Epic is not stored in history.jsonl (local only)
                 epic_id = None
                 
                 # Create task
@@ -84,7 +84,7 @@ class HistoryService:
         return imported_count
     
     def export_task(self, task_id: str) -> None:
-        """Export completed task to history.json.
+        """Export completed task to history.jsonl.
         
         Appends task as a single line (JSON Lines format).
         """
@@ -127,7 +127,7 @@ class HistoryService:
                         else:  # Add/Modify/Delete: use filename
                             files_changed.append(parts[1])
         
-        # Prepare task data (git_hash and epic_id stored only in local DB, not in shared history.json)
+        # Prepare task data (git_hash and epic_id stored only in local DB, not in shared history.jsonl)
         task_data = {
             "id": task.id,
             "name": task.name,
@@ -150,7 +150,7 @@ class HistoryService:
         results = []
         
         for task in tasks:
-            # Check if file is in files_changed (from history.json or git_hash)
+            # Check if file is in files_changed (from history.jsonl or git_hash)
             # For now, we'll search by summary/name containing the file path
             if file_path in task.summary or file_path in task.file_name:
                 results.append({
@@ -162,7 +162,7 @@ class HistoryService:
                     "completed_at": task.completed_at.isoformat() if task.completed_at else None,
                 })
         
-        # Also search history.json for files_changed field (JSON Lines format)
+        # Also search history.jsonl for files_changed field (JSON Lines format)
         if self.history_file.exists():
             with open(self.history_file, 'r') as f:
                 for line in f:

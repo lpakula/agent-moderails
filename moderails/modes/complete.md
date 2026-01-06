@@ -29,11 +29,11 @@ moderails task complete --task <task-id> --summary "brief summary of what was do
 
 **This will:**
 - Mark the task as completed in the database
-- Export the task to history.json 
+- Export the task to history.jsonl 
 
-4. Commit the code changes AND history.json:
+4. Commit the code changes AND history.jsonl:
 ```bash
-git add <file1> <file2> <file3>... history.json
+git add <file1> <file2> <file3>... history.jsonl
 git commit -m "<type>: <task-name> - <brief description>"
 ```
 
@@ -45,7 +45,7 @@ The commit message uses the task type directly:
 
 **Important:** 
 - Only stage files that are part of this task
-- MUST include history.json in the commit
+- MUST include history.jsonl in the commit
 - Do NOT use `git add -A`
 
 5. Update task with git hash:

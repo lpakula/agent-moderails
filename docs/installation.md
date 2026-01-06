@@ -37,7 +37,7 @@ my-project/
 └── .moderails/
     ├── config.json ⚙️
     ├── moderails.db 💾
-    ├── history.json 📜
+    ├── history.jsonl 📜
     ├── tasks/ 📝
     │   ├── task-name-abc123.plan.md
     │   └── another-task-xyz789.plan.md
@@ -49,7 +49,7 @@ my-project/
 ✨ *moderails.md* — triggers the protocol in your editor  
 ⚙️ *config.json* — workflow configuration  
 💾 *moderails.db* — stores epics and tasks for fast search (local only)  
-📜 *history.json* — persistent storage of all completed tasks, searchable by the agent  
+📜 *history.jsonl* — persistent storage of all completed tasks, searchable by the agent  
 📝 *tasks/* — temporary working files (ignored in git, exist until task completion)  
 📚 *context/* — project knowledge base  
 &nbsp;&nbsp;🔒 *mandatory/* — loaded automatically with every task (conventions, architecture)  

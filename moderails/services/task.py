@@ -160,7 +160,7 @@ class TaskService:
         return task_file.read_text() if task_file.exists() else None
     
     def complete(self, task_id: str, git_hash: Optional[str] = None) -> Task:
-        """Mark task as completed and export to history.json.
+        """Mark task as completed and export to history.jsonl.
         
         Args:
             task_id: 6-character task ID
