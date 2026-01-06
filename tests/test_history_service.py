@@ -201,17 +201,16 @@ class TestHistoryService:
         assert 'epic' not in exported_task
         assert exported_task['name'] == "Epic task"
     
-    def test_export_task_extracts_files_changed(self, test_db, temp_dir):
-        """Test that files_changed is extracted from git when git_hash is present."""
+    def test_export_task_includes_files_changed(self, test_db, temp_dir):
+        """Test that files_changed is included in export (from staged files)."""
         history_file = temp_dir / "history.jsonl"
         
-        # Create task with a git hash (note: may be empty if not in git repo)
+        # Create completed task
         task = Task(
-            name="Task with hash",
+            name="Task with files",
             file_name="task.md",
             status=TaskStatus.COMPLETED,
             summary="Task summary",
-            git_hash="HEAD",  # Use HEAD if in git repo
             completed_at=datetime.now(timezone.utc)
         )
         test_db.add(task)
@@ -225,7 +224,7 @@ class TestHistoryService:
             lines = f.readlines()
         
         exported_task = json.loads(lines[0])
-        # files_changed should be a list (may be empty if not in git repo or hash invalid)
+        # files_changed should be a list (may be empty if no staged files)
         assert isinstance(exported_task['files_changed'], list)
     
     def test_export_task_not_found(self, test_db, temp_dir):

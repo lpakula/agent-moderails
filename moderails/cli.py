@@ -17,6 +17,7 @@ from .utils import (
     format_task_line,
     search_context_files,
 )
+from .utils.git import get_staged_files
 
 
 def get_moderails_dir(db_path: Optional[Path] = None) -> Path:
@@ -352,6 +353,15 @@ def task_complete(ctx, task_id: str, summary: Optional[str]):
     """Mark task as completed"""
     services = get_services_or_exit(ctx)
     
+    # Check for staged files (required for files_changed in history)
+    staged_files = get_staged_files()
+    if not staged_files:
+        click.echo("❌ No staged files found.")
+        click.echo("\n💡 Stage your changes first:")
+        click.echo("   git add <file1> <file2> ...")
+        click.echo("\nThen run this command again.")
+        return
+    
     try:
         # Update summary if provided
         if summary:
@@ -364,7 +374,6 @@ def task_complete(ctx, task_id: str, summary: Optional[str]):
         # Export to history.jsonl
         services["history"].export_task(task_id)
         click.echo("✅ Exported to history.jsonl")
-        click.echo("\n💡 Next: Commit your changes including history.jsonl")
         
     except ValueError as e:
         click.echo(f"❌ {e}")

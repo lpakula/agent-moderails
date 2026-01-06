@@ -15,11 +15,12 @@ git branch --show-current
 **If on `main` branch: ASK USER TO CONFIRM before proceeding with commit.**  
 Wait for explicit confirmation. If user declines, STOP and suggest switching to a feature branch.
 
-2. Review changes for this task:
+2. Review and stage changes for this task:
 ```bash
 git status
+git add <file1> <file2> <file3>...
 ```
-Identify which files were changed as part of this task.
+Stage only the files that are part of this task. Do NOT use `git add -A`.
 
 3. Mark task as completed with summary:
 ```bash
@@ -29,11 +30,11 @@ moderails task complete --task <task-id> --summary "brief summary of what was do
 
 **This will:**
 - Mark the task as completed in the database
-- Export the task to history.jsonl 
+- Export the task to history.jsonl (with list of staged files)
 
-4. Commit the code changes AND history.jsonl:
+4. Stage history.jsonl and commit:
 ```bash
-git add <file1> <file2> <file3>... history.jsonl
+git add .moderails/history.jsonl
 git commit -m "<type>: <task-name> - <brief description>"
 ```
 
@@ -42,11 +43,6 @@ The commit message uses the task type directly:
 - Tasks with type "feature" → `feature: <description>`
 - Tasks with type "fix" → `fix: <description>`
 - Tasks with type "refactor" → `refactor: <description>`
-
-**Important:** 
-- Only stage files that are part of this task
-- MUST include history.jsonl in the commit
-- Do NOT use `git add -A`
 
 5. Update task with git hash:
 ```bash

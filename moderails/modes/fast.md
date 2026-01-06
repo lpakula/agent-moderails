@@ -43,20 +43,21 @@ moderails task create --name "<descriptive-task-name>" --type <feature|fix|refac
 ```
    Note the returned task ID. The `--no-file` flag skips task file creation and `--no-context` suppresses context output (no plan file needed for snapshots).
 
-2. Review changes for this task:
+2. Review and stage changes for this task:
 ```bash
 git status
+git add <file1> <file2> <file3>...
 ```
-   Identify which files were changed as part of this task.
+   Stage only the files that are part of this task. Do NOT use `git add -A`.
 
-3. Complete the task (exports to history.jsonl):
+3. Complete the task (exports staged files to history.jsonl):
 ```sh
 moderails task complete --task <task-id> --summary "<brief summary>"
 ```
 
-4. Stage and commit changes including history.jsonl:
+4. Stage history.jsonl and commit:
 ```sh
-git add <file1> <file2> <file3>... history.jsonl
+git add .moderails/history.jsonl
 git commit -m "<type>: <task-name> - <brief description>"
 ```
    Use conventional commit format matching the task type.

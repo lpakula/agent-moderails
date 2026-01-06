@@ -8,7 +8,7 @@ from typing import Optional
 from sqlalchemy.orm import Session
 
 from ..db.models import Task, TaskStatus, TaskType
-from ..utils.git import get_name_status
+from ..utils.git import get_staged_files
 
 
 class HistoryService:
@@ -109,23 +109,8 @@ class HistoryService:
                     except json.JSONDecodeError:
                         continue
         
-        # Extract files changed from git diff
-        files_changed = []
-        if task.git_hash:
-            name_status = get_name_status(task.git_hash)
-            if name_status:
-                # Parse git name-status output
-                # Format: "A\tfile.py" or "M\tfile.py" or "R100\told.py\tnew.py"
-                for line in name_status.splitlines():
-                    if not line.strip():
-                        continue
-                    parts = line.split('\t')
-                    if len(parts) >= 2:
-                        status = parts[0]
-                        if status.startswith('R'):  # Rename: use new filename
-                            files_changed.append(parts[2] if len(parts) > 2 else parts[1])
-                        else:  # Add/Modify/Delete: use filename
-                            files_changed.append(parts[1])
+        # Get staged files (excludes .moderails/, lock files, etc.)
+        files_changed = get_staged_files()
         
         # Prepare task data (git_hash and epic_id stored only in local DB, not in shared history.jsonl)
         task_data = {
