@@ -50,14 +50,13 @@ git add <file1> <file2> <file3>...
 ```
    Stage only the files that are part of this task. Do NOT use `git add -A`.
 
-3. Complete the task (exports staged files to history.jsonl):
+3. Complete the task (exports staged files to history.jsonl and auto-stages it):
 ```sh
 moderails task complete --task <task-id> --summary "<brief summary>"
 ```
 
-4. Stage history.jsonl and commit:
+4. Commit:
 ```sh
-git add .moderails/history.jsonl
 git commit -m "<type>: <task-name> - <brief description>"
 ```
    Use conventional commit format matching the task type.

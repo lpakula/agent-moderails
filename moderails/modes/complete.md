@@ -30,11 +30,11 @@ moderails task complete --task <task-id> --summary "brief summary of what was do
 
 **This will:**
 - Mark the task as completed in the database
-- Export the task to history.jsonl (with list of staged files)
+- Export the task to history.jsonl
+- Auto-stage history.jsonl
 
-4. Stage history.jsonl and commit:
+4. Commit:
 ```bash
-git add .moderails/history.jsonl
 git commit -m "<type>: <task-name> - <brief description>"
 ```
 

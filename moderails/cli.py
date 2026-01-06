@@ -1,6 +1,7 @@
 """CLI for moderails - structured agent workflow with persistent memory."""
 
 import json
+import subprocess
 from pathlib import Path
 from typing import Optional
 
@@ -371,9 +372,15 @@ def task_complete(ctx, task_id: str, summary: Optional[str]):
         task = services["task"].complete(task_id, git_hash=None)
         click.echo(f"✅ Task completed: {task.id} - {task.name}")
         
-        # Export to history.jsonl
+        # Export to history.jsonl and stage it
         services["history"].export_task(task_id)
-        click.echo("✅ Exported to history.jsonl")
+        
+        # Auto-stage history.jsonl for the commit
+        moderails_dir = get_moderails_dir(ctx.obj.get("db_path"))
+        history_path = moderails_dir / "history.jsonl"
+        subprocess.run(["git", "add", str(history_path)], check=False)
+        
+        click.echo("✅ Exported and staged history.jsonl")
         
     except ValueError as e:
         click.echo(f"❌ {e}")
