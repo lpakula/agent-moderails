@@ -62,21 +62,13 @@ class TaskService:
         filename_base = f"{sanitized_name}-{task.id}"
         
         tasks_dir = self.moderails_dir / "tasks"
-        
-        if epic:
-            sanitized_epic = self._sanitize_name(epic.name)
-            task_dir = tasks_dir / sanitized_epic
-            file_name = f"tasks/{sanitized_epic}/{filename_base}.plan.md"
-        else:
-            task_dir = tasks_dir
-            file_name = f"tasks/{filename_base}.plan.md"
-        
+        file_name = f"tasks/{filename_base}.plan.md"
         task.file_name = file_name
         
         # Only create file if requested
         if create_file:
-            task_dir.mkdir(parents=True, exist_ok=True)
-            task_file = task_dir / f"{filename_base}.plan.md"
+            tasks_dir.mkdir(parents=True, exist_ok=True)
+            task_file = tasks_dir / f"{filename_base}.plan.md"
             
             template = get_task_template()
             content = template.format(name=name, summary=summary or "[task purpose]")
