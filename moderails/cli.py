@@ -502,7 +502,7 @@ def mode(ctx, name: str):
 @click.option("--status", "-s", type=click.Choice(["draft", "in-progress", "completed"]), help="Filter by status")
 @click.pass_context
 def list_tasks(ctx, status: Optional[str]):
-    """List all tasks in chronological order."""
+    """List all tasks (active first, completed at bottom)."""
     services = get_services_or_exit(ctx)
     
     # Get all tasks
@@ -513,12 +513,13 @@ def list_tasks(ctx, status: Optional[str]):
         click.echo("No tasks found.")
         return
     
-    # Sort all tasks by most recent timestamp (completed_at for completed, created_at for others)
-    # Newest at top (reverse=True)
+    # Sort: non-completed tasks first (newest at top), then completed tasks at bottom (newest at top)
     sorted_tasks = sorted(
         tasks,
-        key=lambda x: x.completed_at if (x.status == TaskStatus.COMPLETED and x.completed_at) else x.created_at,
-        reverse=True
+        key=lambda x: (
+            x.status == TaskStatus.COMPLETED,  # False (0) first, True (1) last
+            -(x.completed_at if (x.status == TaskStatus.COMPLETED and x.completed_at) else x.created_at).timestamp()
+        )
     )
     
     # Display: task_id [type] [status] [epic] [timestamp] - task name
