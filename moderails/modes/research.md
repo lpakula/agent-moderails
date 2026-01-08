@@ -13,26 +13,30 @@ Information gathering and proposing implementation approach.
    - Identify what parts of the codebase might be relevant
    - Task plan and mandatory context are already available
    
-2. Search for relevant context:
+2. Discover available context:
    ```sh
-   moderails context search --query <topic-from-task-description>
-   # OR
-   moderails context search --file <path> 
+   moderails context list
    ```
-   Use this to find related code, patterns, or previous implementations.
+   This shows available rules and files touched by past tasks.
 
-3. Explore the codebase:
+3. Load relevant context (flags can be combined):
+   ```sh
+   moderails context load --rule auth --rule payments --file src/auth.ts
+   ```
+   Load specific rules and/or find tasks related to files.
+
+4. Explore the codebase:
    - Read relevant files
    - Understand existing patterns
    - Identify dependencies
 
-4. Propose implementation approach:
+5. Propose implementation approach:
    - Make informed decisions based on the codebase
    - Suggest concrete solutions
    - Be autonomous - user can always ask to change your suggestions
    - Only ask questions for critical decisions where multiple approaches have significant trade-offs
 
-5. When ready, suggest:
+6. When ready, suggest:
    - `#brainstorm` — if exploring alternative approaches would be valuable
    - `#plan` — to proceed with defining the implementation plan
 
@@ -55,7 +59,8 @@ This allows users to respond with "1a" or "2b,c". Keep questions minimal - user 
 ## PERMITTED
 - Read codebase files, docs, structure
 - Summarize existing behavior
-- Search for additional context using `moderails context search`
+- Discover context with `moderails context list`
+- Load context with `moderails context load --rule <name> --file <path>`
 - Propose implementation approaches
 - Make informed decisions autonomously
 - Ask only critical questions

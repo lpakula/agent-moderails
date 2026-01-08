@@ -16,7 +16,6 @@ from .services.history import HistoryService
 from .utils import (
     create_command_files,
     format_task_line,
-    search_context_files,
 )
 from .utils.git import get_staged_files
 
@@ -554,79 +553,105 @@ def context(ctx):
 
 
 
+@context.command("list")
+@click.pass_context
+def context_list(ctx):
+    """List available rules and files from history."""
+    services = get_services_or_exit(ctx)
+    
+    click.echo("## AVAILABLE CONTEXT\n")
+    
+    # 1. List available rules
+    rules = services["context"].list_rules()
+    click.echo("### RULES\n")
+    if rules:
+        for rule in rules:
+            click.echo(f"- {rule}")
+    else:
+        click.echo("No rules")
+    
+    click.echo()
+    
+    # 2. Show files from history
+    click.echo("### FILES\n")
+    files_tree = services["context"].get_files_tree()
+    if files_tree:
+        click.echo(files_tree)
+    else:
+        click.echo("No files")
+    
+    # 3. Usage instructions
+    click.echo("\n---\n")
+    click.echo("### USAGE\n")
+    click.echo("```sh")
+    click.echo("# Load all context types (flags can be combined)")
+    click.echo("moderails context load --mandatory --rule auth --rule payments --file src/auth.ts")
+    click.echo("```")
+
+
 @context.command("load")
+@click.option("--mandatory", "-m", is_flag=True, help="Load mandatory context")
+@click.option("--rule", "-r", multiple=True, help="Rule name to load (can specify multiple)")
+@click.option("--file", "-f", multiple=True, help="File path to search tasks (can specify multiple)")
 @click.pass_context
-def context_load(ctx):
-    """Load and display mandatory context files."""
-    services = get_services_or_exit(ctx)
-    moderails_dir = get_moderails_dir(ctx.obj.get("db_path"))
-    
-    # Load mandatory context
-    mandatory_context = services["context"].load_mandatory_context()
-    
-    if not mandatory_context:
-        click.echo("No mandatory context files found.")
-        click.echo(f"\nAdd markdown files to: {moderails_dir / 'context' / 'mandatory'}/")
-        return
-    
-    # Display formatted context (same as task create/load)
-    click.echo(mandatory_context)
-
-
-@context.command("search")
-@click.option("--query", "-q", help="Search query for context files and task history")
-@click.option("--file", "-f", help="File path to search tasks by file")
-@click.pass_context
-def context_search(ctx, query: Optional[str], file: Optional[str]):
-    """Search context files and task history."""
-    if not query and not file:
-        click.echo("❌ Provide either --query or --file")
-        return
-    
-    if query and file:
-        click.echo("❌ Use either --query or --file, not both")
+def context_load(ctx, mandatory: bool, rule: tuple, file: tuple):
+    """Load context: mandatory, rules, and/or files. Flags can be combined."""
+    if not mandatory and not rule and not file:
+        click.echo("❌ Provide --mandatory, --rule, or --file")
+        click.echo("\n💡 Run `moderails context list` to see available options")
         return
     
     services = get_services_or_exit(ctx)
     moderails_dir = get_moderails_dir(ctx.obj.get("db_path"))
     
-    click.echo("## CONTEXT SEARCH\n")
+    output_parts = []
     
-    # 1. Search context files (only if query provided, search in context/search/ directory)
-    if query:
-        search_dir = moderails_dir / "context" / "search"
-        click.echo(f"### CONTEXT FILES (query: '{query}')\n")
-        
-        search_results = search_context_files(query, search_dir)
-        if search_results:
-            click.echo(search_results)
+    # 1. Load mandatory context
+    if mandatory:
+        mandatory_context = services["context"].load_mandatory_context()
+        if mandatory_context:
+            output_parts.append(mandatory_context)
         else:
-            click.echo("No matches in context files")
+            output_parts.append("No mandatory context files found.")
+            output_parts.append(f"Add markdown files to: {moderails_dir / 'context' / 'mandatory'}/")
+    
+    # 2. Load rules by name
+    if rule:
+        rule_content = services["context"].load_rules(list(rule))
         
-        click.echo("\n---\n")
+        if rule_content:
+            output_parts.append(rule_content)
+        else:
+            available = services["context"].list_rules()
+            msg = f"❌ No rules found for: {', '.join(rule)}"
+            if available:
+                msg += f"\nAvailable: {', '.join(available)}"
+            output_parts.append(msg)
     
-    # 2. Search task history
+    # 3. Search task history by file(s)
     if file:
-        click.echo(f"### TASK HISTORY (file: '{file}')\n")
-        history_results = services["history"].search_by_file(file)
-    else:
-        click.echo(f"### TASK HISTORY (query: '{query}')\n")
-        history_results = services["history"].search_by_query(query)
+        for file_path in file:
+            history_results = services["history"].search_by_file(file_path)
+            
+            if history_results:
+                file_parts = [f"## FILE HISTORY: {file_path}\n"]
+                file_parts.append(f"Found {len(history_results)} related task(s):\n")
+                for result in history_results:
+                    epic_str = f" [{result['epic']}]" if result.get('epic') else ""
+                    file_parts.append(f"**{result['name']}{epic_str}**")
+                    file_parts.append(f"  Status: {result['status']}")
+                    file_parts.append(f"  Summary: {result['summary']}")
+                    if result.get('files_changed'):
+                        file_parts.append(f"  Files: {', '.join(result['files_changed'][:5])}")
+                    if result.get('git_hash'):
+                        file_parts.append(f"  Git: {result['git_hash'][:7]}")
+                    file_parts.append("")
+                output_parts.append("\n".join(file_parts))
+            else:
+                output_parts.append(f"No tasks found for file: {file_path}")
     
-    if history_results:
-        click.echo(f"Found {len(history_results)} related task(s):\n")
-        for result in history_results:
-            epic_str = f" [{result['epic']}]" if result.get('epic') else ""
-            click.echo(click.style(f"{result['name']}{epic_str}", fg="green"))
-            click.echo(f"  Status: {result['status']}")
-            click.echo(f"  Summary: {result['summary']}")
-            if result.get('files_changed'):
-                click.echo(f"  Files: {', '.join(result['files_changed'][:5])}")
-            if result.get('git_hash'):
-                click.echo(f"  Git: {result['git_hash'][:7]}")
-            click.echo()
-    else:
-        click.echo("No matching tasks in history")
+    # Output all parts with separators
+    click.echo("\n---\n".join(output_parts))
 
 
 # ============== SYNC ==============

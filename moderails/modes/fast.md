@@ -13,25 +13,27 @@ Best for small tasks, bug fixes, and quick iterations where you want context-awa
 
 1. **Load mandatory context first**:
    ```sh
-   moderails context load
+   moderails context load --mandatory
    ```
    This loads your conventions, architecture decisions, and critical constraints.
 
-2. **Search for additional context when needed**:
+2. **Discover available context**:
    ```sh
-   moderails context search --query <topic>
-   # OR
-   moderails context search --file <path>
+   moderails context list
    ```
-   Use this to find:
-   - Similar implementations
-   - Existing patterns
+   Shows available rules and files touched by past tasks.
+
+3. **Load relevant context when needed** (flags can be combined):
+   ```sh
+   moderails context load --rule auth --rule payments --file src/auth.ts
+   ```
+   Use this to load:
+   - Specific rules (auth, payments, etc.)
    - Past tasks that touched the same files
-   - Documentation in searchable context
 
-3. **Work directly** - make changes, iterate, discuss with the user
+4. **Work directly** - make changes, iterate, discuss with the user
 
-4. **That's it!** No task creation, no mode switching, no formal workflow
+5. **That's it!** No task creation, no mode switching, no formal workflow
 
 ## SNAPSHOT WORKFLOW (OPTIONAL)
 

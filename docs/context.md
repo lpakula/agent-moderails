@@ -16,18 +16,23 @@ Files in `.moderails/context/mandatory/` contain essential project knowledge.
 Automatically loaded when you start working on any task (when creating or loading tasks).
 
 
-## Searchable Context
+## Rules Context
 
-Files in `.moderails/context/search/` contain reference documentation that the agent searches when needed.
+Files in `.moderails/context/rules/` are named context documents that the agent can discover and load.
 
 **Use this for:**
-- Feature documentation (auth, payments, etc.)
+- Feature documentation (auth.md, payments.md, etc.)
 - API references
 - Implementation patterns
 - Technical guides
 
-**When it's loaded:**  
-The agent searches these files on-demand during `#research` mode when exploring specific topics or looking for relevant examples.
+**How it works:**
+1. The agent runs `moderails context list` to see available rules
+2. The agent loads specific rules with `moderails context load --rule auth --rule payments`
+
+Flags can be combined: `moderails context load --mandatory --rule auth --file src/auth.ts`
+
+This is deterministic - the agent knows exactly what's available and loads full documents by name, rather than searching with random queries that might miss.
 
 ## Epic Context
 

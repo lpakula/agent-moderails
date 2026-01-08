@@ -7,8 +7,10 @@ Add markdown files with project context to help agents understand your codebase.
 Files here are automatically loaded when creating or loading tasks.
 Use for: conventions, architecture decisions, critical constraints.
 
-## `search/` - On-demand
+## `rules/` - On-demand
 
-Files here are searched dynamically by the agent based on task requirements.
-Use for: feature documentation (auth, payments, etc), implementation guides, API references.
+Named context documents the agent can discover and load.
+Use for: feature documentation (auth.md, payments.md), implementation guides, API references.
+
+Agent runs `moderails context list` to see available rules, then loads with `moderails context load --rule <name> --rule <name>`.
 

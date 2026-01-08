@@ -53,12 +53,12 @@ moderails epic update --epic <epic-id> --name "New Epic Name"
 ## Context Management
 
 ```bash
-# Load mandatory context
-moderails context load
+# List available rules and files
+moderails context list
+# Load context (flags can be combined)
+moderails context load --mandatory --rule auth --rule payments --file src/auth.ts
 # Load task context
 moderails task load --task <task-id>  
-# Search context
-moderails context search --query <topic> | --file <path>  
 ```
 
 ## History Sync
