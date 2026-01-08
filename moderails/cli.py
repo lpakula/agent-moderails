@@ -585,7 +585,7 @@ def context_list(ctx):
     click.echo("### USAGE\n")
     click.echo("```sh")
     click.echo("# Load all context types (flags can be combined)")
-    click.echo("moderails context load --mandatory --rule auth --rule payments --file src/auth.ts")
+    click.echo("moderails context load --rule auth --rule payments --file src/auth.ts")
     click.echo("```")
 
 
