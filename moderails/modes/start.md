@@ -76,8 +76,8 @@ moderails mode --name execute
 ### When task exists:
 1. Ask user to confirm which task to work on
 2. Load the task context: `moderails task load --task <task-id>`
-3. Advise user to type `#research` if task has `draft` status
-4. Advise user to type `#execute` if task has `in-progress` status
+3. Advise user to type `#research` if task file is empty (template)
+4. Advise user to type `#execute` if task file is not empty 
 
 ---
 **YOU MUST FOLLOW THE WORKFLOW**
