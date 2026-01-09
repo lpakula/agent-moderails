@@ -15,7 +15,7 @@ moderails task update --task <task-id> [--name <name>] [--status <status>] [--ty
 # Epic Management
 moderails epic list
 moderails epic create --name "epic-name"
-moderails epic update --epic <epic-id> --name "New Epic Name"
+moderails epic update --epic <epic-id> --name "new-epic-name"
 
 # Context Management
 moderails context search --query <topic> | --file <path>

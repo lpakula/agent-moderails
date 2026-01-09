@@ -1,5 +1,6 @@
 """Epic service - CRUD operations for epics."""
 
+import re
 from pathlib import Path
 from typing import Optional
 
@@ -9,13 +10,21 @@ from ..db.models import Epic, Task, TaskStatus
 from ..utils.git import generate_epic_diff, generate_epic_files_changed, get_name_status
 
 
+def is_valid_slug(name: str) -> bool:
+    """Check if name is a valid slug (lowercase letters, numbers, and dashes only)."""
+    return bool(re.match(r'^[a-z0-9]+(-[a-z0-9]+)*$', name))
+
+
 class EpicService:
     def __init__(self, session: Session, moderails_dir: Optional[Path] = None):
         self.session = session
         self.moderails_dir = moderails_dir
     
     def create(self, name: str) -> Epic:
-        # Epic names can now contain spaces
+        """Create a new epic with a slug name (lowercase letters, numbers, and dashes only)."""
+        if not is_valid_slug(name):
+            raise ValueError("Epic name must be a slug (lowercase letters, numbers, and dashes only, e.g., 'my-epic')")
+        
         epic = Epic(name=name)
         self.session.add(epic)
         self.session.commit()

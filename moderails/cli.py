@@ -516,14 +516,15 @@ def mode(ctx, name: str):
 
 @cli.command("list")
 @click.option("--status", "-s", type=click.Choice(["draft", "in-progress", "completed"]), help="Filter by status")
+@click.option("--epic-name", "-e", help="Filter by epic name")
 @click.pass_context
-def list_tasks(ctx, status: Optional[str]):
+def list_tasks(ctx, status: Optional[str], epic_name: Optional[str]):
     """List all tasks (active first, completed at bottom)."""
     services = get_services_or_exit(ctx)
     
     # Get all tasks
     status_enum = TaskStatus(status) if status else None
-    tasks = services["task"].list_all(status=status_enum)
+    tasks = services["task"].list_all(epic_name=epic_name, status=status_enum)
     
     if not tasks:
         click.echo("No tasks found.")
