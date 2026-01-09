@@ -65,8 +65,14 @@ class TaskService:
         sanitized_name = self._sanitize_name(name)
         filename_base = f"{sanitized_name}-{task.id}"
         
-        tasks_dir = self.moderails_dir / "tasks"
-        file_name = f"tasks/{filename_base}.plan.md"
+        # Organize by epic folder if task belongs to an epic
+        if epic:
+            tasks_dir = self.moderails_dir / "tasks" / epic.name
+            file_name = f"tasks/{epic.name}/{filename_base}.plan.md"
+        else:
+            tasks_dir = self.moderails_dir / "tasks"
+            file_name = f"tasks/{filename_base}.plan.md"
+        
         task.file_name = file_name
         
         # Only create file if requested
