@@ -1,5 +1,6 @@
 """Epic service - CRUD operations for epics."""
 
+from pathlib import Path
 from typing import Optional
 
 from sqlalchemy.orm import Session
@@ -9,8 +10,9 @@ from ..utils.git import generate_epic_diff, generate_epic_files_changed, get_nam
 
 
 class EpicService:
-    def __init__(self, session: Session):
+    def __init__(self, session: Session, moderails_dir: Optional[Path] = None):
         self.session = session
+        self.moderails_dir = moderails_dir
     
     def create(self, name: str) -> Epic:
         # Epic names can now contain spaces
@@ -41,7 +43,7 @@ class EpicService:
     
     def get_summary(self, name: str, short: bool = False) -> str:
         """
-        Get epic summary from completed task summaries and git diffs.
+        Get epic summary from completed task summaries, task files, and git diffs.
         
         Args:
             name: Epic name
@@ -63,13 +65,28 @@ class EpicService:
             return f"# Epic: {epic.name}\n\nNo completed tasks yet."
         
         # Build epic summary with per-task details
-        parts = [f"# Epic: {epic.name}\n", "## Completed Tasks\n"]
+        task_parts = []
         
         for idx, task in enumerate(tasks, 1):
+            parts = []
+            
             # Task header with number and date
             date_str = task.completed_at.strftime("%b %d") if task.completed_at else "unknown date"
-            parts.append(f"\n### {idx}. {task.name} ({date_str})\n")
+            parts.append(f"### {idx}. {task.name} ({date_str})\n")
             parts.append(f"**Summary**: {task.summary}\n")
+            
+            # Include task file content if exists
+            if self.moderails_dir and task.file_name:
+                task_file = self.moderails_dir / task.file_name
+                if task_file.exists():
+                    try:
+                        task_content = task_file.read_text().strip()
+                        if task_content:
+                            parts.append("**Task Plan**:\n")
+                            parts.append(task_content)
+                            parts.append("")
+                    except Exception:
+                        pass
             
             # Show files and diffs if git hash exists
             if task.git_hash and task.git_hash.strip():
@@ -94,5 +111,9 @@ class EpicService:
                     if task_diff:
                         parts.append("**Changes**:")
                         parts.append(task_diff)
+            
+            task_parts.append("\n".join(parts))
         
-        return "\n".join(parts)
+        # Join with separators
+        header = f"# Epic: {epic.name}\n\n## Completed Tasks\n"
+        return header + "\n---\n\n".join(task_parts)

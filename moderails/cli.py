@@ -34,7 +34,7 @@ def get_services(db_path: Optional[Path] = None):
     history_file = moderails_dir / "history.jsonl"
     return {
         "task": TaskService(session, moderails_dir),
-        "epic": EpicService(session),
+        "epic": EpicService(session, moderails_dir),
         "history": HistoryService(session, history_file),
         "context": ContextService(moderails_dir),
     }
