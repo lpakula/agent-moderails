@@ -309,14 +309,15 @@ def task_create(ctx, name: str, epic: Optional[str], type: str, status: str, no_
 @click.option("--type", type=click.Choice(["feature", "fix", "refactor", "chore"]), help="New task type")
 @click.option("--summary", help="Task summary")
 @click.option("--git-hash", help="Git commit hash")
+@click.option("--file-name", help="Task file name (e.g., my-task.md)")
 @click.pass_context
-def task_update(ctx, task_id: str, name: Optional[str], status: Optional[str], type: Optional[str], summary: Optional[str], git_hash: Optional[str]):
-    """Update task name, status, type, summary, or git hash."""
+def task_update(ctx, task_id: str, name: Optional[str], status: Optional[str], type: Optional[str], summary: Optional[str], git_hash: Optional[str], file_name: Optional[str]):
+    """Update task name, status, type, summary, git hash, or file name."""
     services = get_services_or_exit(ctx)
     
     status_enum = TaskStatus(status) if status else None
     type_enum = TaskType(type) if type else None
-    t = services["task"].update(task_id, name=name, status=status_enum, task_type=type_enum, summary=summary, git_hash=git_hash)
+    t = services["task"].update(task_id, name=name, status=status_enum, task_type=type_enum, summary=summary, git_hash=git_hash, file_name=file_name)
     
     if not t:
         click.echo(f"❌ Task '{task_id}' not found")

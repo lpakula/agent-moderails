@@ -108,6 +108,7 @@ class TaskService:
         task_type: Optional[TaskType] = None,
         summary: Optional[str] = None,
         git_hash: Optional[str] = None,
+        file_name: Optional[str] = None,
     ) -> Optional[Task]:
         task = self.get(task_id)
         if not task:
@@ -125,6 +126,8 @@ class TaskService:
             task.summary = summary
         if git_hash:
             task.git_hash = git_hash
+        if file_name is not None:
+            task.file_name = file_name
         
         self.session.commit()
         self.session.refresh(task)
