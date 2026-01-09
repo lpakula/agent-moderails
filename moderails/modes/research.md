@@ -17,13 +17,13 @@ Information gathering and proposing implementation approach.
    ```sh
    moderails context list
    ```
-   This shows available rules and files touched by past tasks.
+   This shows available memories and files touched by past tasks.
 
 3. Load relevant context (flags can be combined):
    ```sh
-   moderails context load --rule auth --rule payments --file src/auth.ts
+   moderails context load --memory auth --memory payments --file src/auth.ts
    ```
-   Load specific rules and/or find tasks related to files.
+   Load specific memories and/or find tasks related to files.
 
 4. Explore the codebase:
    - Read relevant files
@@ -60,7 +60,7 @@ This allows users to respond with "1a" or "2b,c". Keep questions minimal - user 
 - Read codebase files, docs, structure
 - Summarize existing behavior
 - Discover context with `moderails context list`
-- Load context with `moderails context load --rule <name> --file <path>`
+- Load context with `moderails context load --memory <name> --file <path>`
 - Propose implementation approaches
 - Make informed decisions autonomously
 - Ask only critical questions

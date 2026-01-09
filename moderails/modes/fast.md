@@ -21,14 +21,14 @@ Best for small tasks, bug fixes, and quick iterations where you want context-awa
    ```sh
    moderails context list
    ```
-   Shows available rules and files touched by past tasks.
+   Shows available memories and files touched by past tasks.
 
 3. **Load relevant context when needed** (flags can be combined):
    ```sh
-   moderails context load --rule auth --rule payments --file src/auth.ts
+   moderails context load --memory auth --memory payments --file src/auth.ts
    ```
    Use this to load:
-   - Specific rules (auth, payments, etc.)
+   - Specific memories (auth, payments, etc.)
    - Past tasks that touched the same files
 
 4. **Work directly** - make changes, iterate, discuss with the user

@@ -30,13 +30,17 @@ class TaskService:
         """Create a new task. Epic is optional (provide epic ID). Both task and epic names can contain spaces.
         
         Args:
-            name: Task name
+            name: Task name (max 20 characters)
             epic_id: Optional epic ID
             summary: Task summary
             task_type: Task type (feature, fix, refactor, chore)
             status: Initial task status
             create_file: Whether to create the task plan file (default: True)
         """
+        
+        # Validate task name length
+        if len(name) > 20:
+            raise ValueError(f"Task name must be 20 characters or less (got {len(name)})")
         
         # Validate epic if provided
         epic = None

@@ -56,7 +56,7 @@ moderails epic update --epic <epic-id> --name "New Epic Name"
 # List available rules and files
 moderails context list
 # Load context (flags can be combined)
-moderails context load --mandatory --rule auth --rule payments --file src/auth.ts
+moderails context load --mandatory --memory auth --memory payments --file src/auth.ts
 # Load task context
 moderails task load --task <task-id>  
 ```

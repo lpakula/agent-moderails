@@ -556,19 +556,19 @@ def context(ctx):
 @context.command("list")
 @click.pass_context
 def context_list(ctx):
-    """List available rules and files from history."""
+    """List available memories and files from history."""
     services = get_services_or_exit(ctx)
     
     click.echo("## AVAILABLE CONTEXT\n")
     
-    # 1. List available rules
-    rules = services["context"].list_rules()
-    click.echo("### RULES\n")
-    if rules:
-        for rule in rules:
-            click.echo(f"- {rule}")
+    # 1. List available memories
+    memories = services["context"].list_memories()
+    click.echo("### MEMORIES\n")
+    if memories:
+        for memory in memories:
+            click.echo(f"- {memory}")
     else:
-        click.echo("No rules")
+        click.echo("No memories")
     
     click.echo()
     
@@ -585,19 +585,19 @@ def context_list(ctx):
     click.echo("### USAGE\n")
     click.echo("```sh")
     click.echo("# Load all context types (flags can be combined)")
-    click.echo("moderails context load --rule auth --rule payments --file src/auth.ts")
+    click.echo("moderails context load --memory auth --memory payments --file src/auth.ts")
     click.echo("```")
 
 
 @context.command("load")
 @click.option("--mandatory", "-m", is_flag=True, help="Load mandatory context")
-@click.option("--rule", "-r", multiple=True, help="Rule name to load (can specify multiple)")
+@click.option("--memory", "-M", multiple=True, help="Memory name to load (can specify multiple)")
 @click.option("--file", "-f", multiple=True, help="File path to search tasks (can specify multiple)")
 @click.pass_context
-def context_load(ctx, mandatory: bool, rule: tuple, file: tuple):
-    """Load context: mandatory, rules, and/or files. Flags can be combined."""
-    if not mandatory and not rule and not file:
-        click.echo("❌ Provide --mandatory, --rule, or --file")
+def context_load(ctx, mandatory: bool, memory: tuple, file: tuple):
+    """Load context: mandatory, memories, and/or files. Flags can be combined."""
+    if not mandatory and not memory and not file:
+        click.echo("❌ Provide --mandatory, --memory, or --file")
         click.echo("\n💡 Run `moderails context list` to see available options")
         return
     
@@ -615,15 +615,15 @@ def context_load(ctx, mandatory: bool, rule: tuple, file: tuple):
             output_parts.append("No mandatory context files found.")
             output_parts.append(f"Add markdown files to: {moderails_dir / 'context' / 'mandatory'}/")
     
-    # 2. Load rules by name
-    if rule:
-        rule_content = services["context"].load_rules(list(rule))
+    # 2. Load memories by name
+    if memory:
+        memory_content = services["context"].load_memories(list(memory))
         
-        if rule_content:
-            output_parts.append(rule_content)
+        if memory_content:
+            output_parts.append(memory_content)
         else:
-            available = services["context"].list_rules()
-            msg = f"❌ No rules found for: {', '.join(rule)}"
+            available = services["context"].list_memories()
+            msg = f"❌ No memories found for: {', '.join(memory)}"
             if available:
                 msg += f"\nAvailable: {', '.join(available)}"
             output_parts.append(msg)

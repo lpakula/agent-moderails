@@ -10,7 +10,7 @@ class ContextService:
         self.moderails_dir = moderails_dir
         self.context_dir = moderails_dir / "context"
         self.mandatory_dir = self.context_dir / "mandatory"
-        self.rules_dir = self.context_dir / "rules"
+        self.memories_dir = self.context_dir / "memories"
         self.history_file = moderails_dir / "history.jsonl"
     
     def load_mandatory_context(self) -> Optional[str]:
@@ -48,40 +48,40 @@ class ContextService:
         
         return "\n".join(context_parts) if len(context_parts) > 1 else None
     
-    def list_rules(self) -> list[str]:
-        """List available rule names (without .md extension).
+    def list_memories(self) -> list[str]:
+        """List available memory names (without .md extension).
         
         Returns:
-            List of rule names that can be loaded
+            List of memory names that can be loaded
         """
-        if not self.rules_dir.exists():
+        if not self.memories_dir.exists():
             return []
         
         return sorted([
-            f.stem for f in self.rules_dir.glob("*.md")
+            f.stem for f in self.memories_dir.glob("*.md")
         ])
     
-    def load_rules(self, names: list[str]) -> Optional[str]:
-        """Load specific rule files by name.
+    def load_memories(self, names: list[str]) -> Optional[str]:
+        """Load specific memory files by name.
         
         Args:
-            names: List of rule names (without .md extension)
+            names: List of memory names (without .md extension)
         
         Returns:
-            Concatenated content of requested rule files, or None if none found
+            Concatenated content of requested memory files, or None if none found
         """
-        if not self.rules_dir.exists():
+        if not self.memories_dir.exists():
             return None
         
         loaded_parts = []
         not_found = []
         
         for name in names:
-            file_path = self.rules_dir / f"{name}.md"
+            file_path = self.memories_dir / f"{name}.md"
             if file_path.exists():
                 try:
                     content = file_path.read_text()
-                    loaded_parts.append(f"### RULE: {name}\n")
+                    loaded_parts.append(f"### MEMORY: {name}\n")
                     loaded_parts.append(content)
                     loaded_parts.append("\n")
                 except Exception:
@@ -92,7 +92,7 @@ class ContextService:
         if not loaded_parts:
             return None
         
-        result = "## LOADED RULES\n\n" + "\n---\n".join(
+        result = "## LOADED MEMORIES\n\n" + "\n---\n".join(
             [part for part in "".join(loaded_parts).split("\n---\n") if part.strip()]
         )
         
@@ -154,5 +154,5 @@ class ContextService:
         """Ensure context directories exist."""
         self.context_dir.mkdir(exist_ok=True)
         self.mandatory_dir.mkdir(exist_ok=True)
-        self.rules_dir.mkdir(exist_ok=True)
+        self.memories_dir.mkdir(exist_ok=True)
 

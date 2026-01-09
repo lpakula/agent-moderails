@@ -16,9 +16,9 @@ Files in `.moderails/context/mandatory/` contain essential project knowledge.
 Automatically loaded when you start working on any task (when creating or loading tasks).
 
 
-## Rules Context
+## Memories Context
 
-Files in `.moderails/context/rules/` are named context documents that the agent can discover and load.
+Files in `.moderails/context/memories/` are named context documents that the agent can discover and load.
 
 **Use this for:**
 - Feature documentation (auth.md, payments.md, etc.)
@@ -27,10 +27,10 @@ Files in `.moderails/context/rules/` are named context documents that the agent 
 - Technical guides
 
 **How it works:**
-1. The agent runs `moderails context list` to see available rules
-2. The agent loads specific rules with `moderails context load --rule auth --rule payments`
+1. The agent runs `moderails context list` to see available memories
+2. The agent loads specific memories with `moderails context load --memory auth --memory payments`
 
-Flags can be combined: `moderails context load --mandatory --rule auth --file src/auth.ts`
+Flags can be combined: `moderails context load --mandatory --memory auth --file src/auth.ts`
 
 This is deterministic - the agent knows exactly what's available and loads full documents by name, rather than searching with random queries that might miss.
 
