@@ -100,8 +100,9 @@ class TaskService:
         query = self.session.query(Task)
         if epic_name:
             epic = self.session.query(Epic).filter(Epic.name == epic_name).first()
-            if epic:
-                query = query.filter(Task.epic_id == epic.id)
+            if not epic:
+                return []  # Epic not found, return empty list
+            query = query.filter(Task.epic_id == epic.id)
         if status:
             query = query.filter(Task.status == status)
         return query.all()
