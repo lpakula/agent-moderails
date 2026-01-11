@@ -77,6 +77,11 @@ def init_db() -> Path:
         context_readme_content = readme_template.read_text()
         context_readme.write_text(context_readme_content)
     
+    # Create empty history.jsonl file
+    history_file = db_path.parent / "history.jsonl"
+    if not history_file.exists():
+        history_file.touch()
+    
     return db_path
 
 
