@@ -49,7 +49,7 @@ moderails task create --name "2-create-models" --epic <epic-id> --status draft
 moderails task create --name "3-add-api-endpoints" --epic <epic-id> --status draft
 ```
    Use numbered prefixes (1-, 2-, 3-) to maintain order.
-   Task files are organized in `.moderails/tasks/<epic-name>/` folder.
+   Task files are named `<epic-name>--<task-name>-<id>.plan.md` for easy grouping.
 
 3. **Update each task file** with its specific plan:
    - Each task should have 3-7 TODO items max

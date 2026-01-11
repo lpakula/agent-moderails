@@ -62,17 +62,15 @@ class TaskService:
         self.session.flush()  # Get id without committing
         
         # Use sanitized name and id for file naming
+        # Prefix with epic name if task belongs to an epic
         sanitized_name = self._sanitize_name(name)
-        filename_base = f"{sanitized_name}-{task.id}"
-        
-        # Organize by epic folder if task belongs to an epic
         if epic:
-            tasks_dir = self.moderails_dir / "tasks" / epic.name
-            file_name = f"tasks/{epic.name}/{filename_base}.plan.md"
+            filename_base = f"{epic.name}--{sanitized_name}-{task.id}"
         else:
-            tasks_dir = self.moderails_dir / "tasks"
-            file_name = f"tasks/{filename_base}.plan.md"
+            filename_base = f"{sanitized_name}-{task.id}"
         
+        tasks_dir = self.moderails_dir / "tasks"
+        file_name = f"tasks/{filename_base}.plan.md"
         task.file_name = file_name
         
         # Only create file if requested

@@ -133,7 +133,7 @@ class TestTaskService:
         task = task_service.create("test-task", epic.id)
         
         assert task.name == "test-task"
-        assert task.file_name.startswith("tasks/test-epic/test-task-")
+        assert task.file_name.startswith("tasks/test-epic--test-task-")
         assert task.status == TaskStatus.DRAFT
     
     def test_create_task_creates_file(self, test_db, temp_dir):
