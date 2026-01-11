@@ -67,8 +67,8 @@ def init_db() -> Path:
     mandatory_dir = context_dir / "mandatory"
     mandatory_dir.mkdir(exist_ok=True)
     
-    search_dir = context_dir / "search"
-    search_dir.mkdir(exist_ok=True)
+    memories_dir = context_dir / "memories"
+    memories_dir.mkdir(exist_ok=True)
     
     # Create README in context directory
     context_readme = context_dir / "README.md"
