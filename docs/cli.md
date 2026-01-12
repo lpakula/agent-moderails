@@ -22,7 +22,8 @@ moderails migrate
 
 ```bash
 # List tasks
-moderails list [--status <status>]
+moderails list [--status <status>] [--epic-name <name>]
+moderails task list [--status <status>] [--epic-name <name>]
 # List epics
 moderails epic list
 ```

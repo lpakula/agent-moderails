@@ -6,7 +6,7 @@ Modal control system for AI agents.
 
 ```
 # Task Management
-moderails list [--status <draft|in-progress|completed>]
+moderails task list [--status <draft|in-progress|completed>]
 moderails task create --name "Task Name" [--epic <epic-id>] [--type feature|fix|refactor|chore]
 moderails task load --task <task-id>
 moderails task complete --task <task-id> [--summary <text>]
@@ -18,17 +18,14 @@ moderails epic create --name "epic-name"
 moderails epic update --epic <epic-id> --name "new-epic-name"
 
 # Context Management
-moderails context search --query <topic> | --file <path>
-
-Examples:
-  moderails context search --query "auth"           # Search by keyword
-  moderails context search --query "auth|user"      # OR search (matches "auth" OR "user")
-  moderails context search --file "models/user.py"  # Search by file
+moderails context list                                # List available memories and files
+moderails context load --mandatory                    # Load mandatory context
+moderails context load --memory <name>                # Load specific memory
+moderails context load --file <path>                  # Search tasks by file
 
 # Session
 moderails start
 moderails mode --name <mode>
-moderails sync
 ```
 
 ## MODES
