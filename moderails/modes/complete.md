@@ -31,7 +31,7 @@ moderails task complete --task <task-id> --summary "brief summary of what was do
 **This will:**
 - Mark the task as completed in the database
 - Export the task to history.jsonl
-- Auto-stage history.jsonl
+- Auto-stage history.jsonl (if staging fails, manually run `git add .moderails/history.jsonl`)
 
 4. Commit:
 ```bash

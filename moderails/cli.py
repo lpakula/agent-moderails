@@ -375,15 +375,57 @@ def task_complete(ctx, task_id: str, summary: Optional[str]):
         # Export to history.jsonl and stage it
         services["history"].export_task(task_id)
         
-        # Auto-stage history.jsonl for the commit
+        # Try to auto-stage history.jsonl for the commit (may fail in restricted environments)
         moderails_dir = get_moderails_dir(ctx.obj.get("db_path"))
         history_path = moderails_dir / "history.jsonl"
-        subprocess.run(["git", "add", str(history_path)], check=False)
-        
-        click.echo("✅ Exported and staged history.jsonl")
+        try:
+            result = subprocess.run(
+                ["git", "add", str(history_path)],
+                check=False,
+                capture_output=True,
+                text=True
+            )
+            if result.returncode == 0:
+                click.echo("✅ Exported and staged history.jsonl")
+            else:
+                click.echo("✅ Exported history.jsonl")
+                click.echo(f"⚠️  Could not auto-stage (run: git add {history_path})")
+        except Exception:
+            click.echo("✅ Exported history.jsonl")
+            click.echo(f"💡 Stage manually: git add {history_path}")
         
     except ValueError as e:
         click.echo(f"❌ {e}")
+
+
+@task.command("list")
+@click.option("--status", "-s", type=click.Choice(["draft", "in-progress", "completed"]), help="Filter by status")
+@click.option("--epic-name", "-e", help="Filter by epic name")
+@click.pass_context
+def task_list(ctx, status: Optional[str], epic_name: Optional[str]):
+    """List all tasks (active first, completed at bottom)."""
+    services = get_services_or_exit(ctx)
+    
+    # Get all tasks
+    status_enum = TaskStatus(status) if status else None
+    tasks = services["task"].list_all(epic_name=epic_name, status=status_enum)
+    
+    if not tasks:
+        click.echo("No tasks found.")
+        return
+    
+    # Sort: non-completed tasks first (newest at top), then completed tasks at bottom (newest at top)
+    sorted_tasks = sorted(
+        tasks,
+        key=lambda x: (
+            x.status == TaskStatus.COMPLETED,  # False (0) first, True (1) last
+            -(x.completed_at if (x.status == TaskStatus.COMPLETED and x.completed_at) else x.created_at).timestamp()
+        )
+    )
+    
+    # Display: task_id [type] [status] [epic] [timestamp] - task name
+    for task in sorted_tasks:
+        click.echo(format_task_line(task))
 
 
 @task.command("load")

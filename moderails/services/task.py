@@ -62,21 +62,25 @@ class TaskService:
         self.session.flush()  # Get id without committing
         
         # Use sanitized name and id for file naming
-        # Prefix with epic name if task belongs to an epic
+        # Create epic subfolder if task belongs to an epic
         sanitized_name = self._sanitize_name(name)
-        if epic:
-            filename_base = f"{epic.name}--{sanitized_name}-{task.id}"
-        else:
-            filename_base = f"{sanitized_name}-{task.id}"
+        filename_base = f"{sanitized_name}-{task.id}.plan.md"
         
-        tasks_dir = self.moderails_dir / "tasks"
-        file_name = f"tasks/{filename_base}.plan.md"
+        if epic:
+            # Create epic-named subfolder: tasks/{epic_name}/
+            epic_folder = self._sanitize_name(epic.name)
+            tasks_dir = self.moderails_dir / "tasks" / epic_folder
+            file_name = f"tasks/{epic_folder}/{filename_base}"
+        else:
+            tasks_dir = self.moderails_dir / "tasks"
+            file_name = f"tasks/{filename_base}"
+        
         task.file_name = file_name
         
         # Only create file if requested
         if create_file:
             tasks_dir.mkdir(parents=True, exist_ok=True)
-            task_file = tasks_dir / f"{filename_base}.plan.md"
+            task_file = tasks_dir / filename_base
             
             template = get_task_template()
             content = template.format(name=name, summary=summary or "[task purpose]")
