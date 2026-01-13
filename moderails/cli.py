@@ -2,6 +2,7 @@
 
 import json
 import subprocess
+import time
 from pathlib import Path
 from typing import Optional
 
@@ -379,6 +380,8 @@ def task_complete(ctx, task_id: str, summary: Optional[str]):
         moderails_dir = get_moderails_dir(ctx.obj.get("db_path"))
         history_path = moderails_dir / "history.jsonl"
         try:
+            # Small delay to let file watchers settle and avoid git index.lock race
+            time.sleep(0.2)
             result = subprocess.run(
                 ["git", "add", str(history_path)],
                 check=False,
