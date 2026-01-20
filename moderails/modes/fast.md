@@ -17,33 +17,19 @@ Best for small tasks, bug fixes, and quick iterations where you want context-awa
    ```
    This loads your conventions, architecture decisions, and critical constraints.
 
-2. **Discover available context**:
-   ```sh
-   moderails context list
-   ```
-   Shows available memories and files touched by past tasks.
+2. **Work directly** - make changes, iterate, discuss with the user
 
-3. **Load relevant context when needed** (flags can be combined):
-   ```sh
-   moderails context load --memory auth --memory payments --file src/auth.ts
-   ```
-   Use this to load:
-   - Specific memories (auth, payments, etc.)
-   - Past tasks that touched the same files
-
-4. **Work directly** - make changes, iterate, discuss with the user
-
-5. **That's it!** No task creation, no mode switching, no formal workflow
+3. **That's it!** No task creation, no mode switching, no formal workflow
 
 ## SNAPSHOT WORKFLOW (OPTIONAL)
 
 If the user types `--snapshot`, preserve your work in task history for future context searches. Create a task entry and structured commit in one go:
 
-1. Create task with `in-progress` status, skip file and context:
+1. Create task with `in-progress` status, skip file creation:
 ```sh
-moderails task create --name "<descriptive-task-name>" --type <feature|fix|refactor|chore> --status in-progress --no-file --no-context
+moderails task create --name "<descriptive-task-name>" --type <feature|fix|refactor|chore> --status in-progress --no-file
 ```
-   Note the returned task ID. The `--no-file` flag skips task file creation and `--no-context` suppresses context output (no plan file needed for snapshots).
+   Note the returned task ID. The `--no-file` flag skips task file creation (no plan file needed for snapshots).
 
 2. Review and stage changes for this task:
 ```bash

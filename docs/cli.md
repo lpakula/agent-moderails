@@ -32,7 +32,7 @@ moderails epic list
 
 ```bash
 # Create task
-moderails task create --name "Task Name" [--type feature|fix|refactor|chore] [--status draft|in-progress] [--epic <epic-id>] [--no-file] [--no-context]
+moderails task create --name "Task Name" [--type feature|fix|refactor|chore] [--status draft|in-progress] [--epic <epic-id>] [--no-file]
 
 # Update task
 moderails task update --task <task-id> [--name <name>] [--status <status>] [--type <type>] [--summary <text>]
@@ -54,10 +54,10 @@ moderails epic update --epic <epic-id> --name "New Epic Name"
 ## Context Management
 
 ```bash
-# List available rules and files
+# List available memories and files from history
 moderails context list
 # Load context (flags can be combined)
-moderails context load --mandatory --memory auth --memory payments --file src/auth.ts
+moderails context load --mandatory --memory auth --memory payments
 # Load task context
 moderails task load --task <task-id>  
 ```

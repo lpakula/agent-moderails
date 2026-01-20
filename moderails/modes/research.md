@@ -12,8 +12,11 @@ Information gathering and proposing implementation approach.
    - Understand what needs to be built
    - Identify what parts of the codebase might be relevant
    - Task plan and mandatory context are already available
-   
-2. Discover available context:
+
+2. Load the task
+   `moderails task load --task <task-id>`   
+
+3. Discover available context:
    ```sh
    moderails context list
    ```
@@ -23,20 +26,20 @@ Information gathering and proposing implementation approach.
    ```sh
    moderails context load --memory auth --memory payments --file src/auth.ts
    ```
-   Load specific memories and/or find tasks related to files.
+   Load specific memories.
 
-4. Explore the codebase:
+5. Explore the codebase:
    - Read relevant files
    - Understand existing patterns
    - Identify dependencies
 
-5. Propose implementation approach:
+6. Propose implementation approach:
    - Make informed decisions based on the codebase
    - Suggest concrete solutions
    - Be autonomous - user can always ask to change your suggestions
    - Only ask questions for critical decisions where multiple approaches have significant trade-offs
 
-6. When ready, suggest:
+7. When ready, suggest:
    - `#brainstorm` — if exploring alternative approaches would be valuable
    - `#plan` — to proceed with defining the implementation plan
 

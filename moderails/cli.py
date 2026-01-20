@@ -241,9 +241,8 @@ def task(ctx):
 @click.option("--type", "-t", type=click.Choice(["feature", "fix", "refactor", "chore"]), default="feature", help="Task type (default: feature)")
 @click.option("--status", "-s", type=click.Choice(["draft", "in-progress"]), default="draft", help="Initial task status (default: draft)")
 @click.option("--no-file", is_flag=True, help="Skip task file creation")
-@click.option("--no-context", is_flag=True, help="Suppress context output")
 @click.pass_context
-def task_create(ctx, name: str, epic: Optional[str], type: str, status: str, no_file: bool, no_context: bool):
+def task_create(ctx, name: str, epic: Optional[str], type: str, status: str, no_file: bool):
     """Create a new task."""
     services = get_services_or_exit(ctx)
     
@@ -254,22 +253,6 @@ def task_create(ctx, name: str, epic: Optional[str], type: str, status: str, no_
         if not epic_obj:
             click.echo(f"❌ Epic '{epic}' not found")
             return
-    
-    # Load and display context unless suppressed
-    if not no_context:
-        # Load mandatory context
-        mandatory_context = services["context"].load_mandatory_context()
-        if mandatory_context:
-            click.echo(mandatory_context)
-            click.echo("\n---\n")
-        
-        # Load epic context if exists
-        if epic_obj:
-            epic_summary = services["epic"].get_summary(epic_obj.name)
-            if epic_summary:
-                click.echo("## EPIC CONTEXT\n")
-                click.echo(epic_summary)
-                click.echo("\n---\n")
     
     try:
         task_type = TaskType(type)
@@ -282,21 +265,14 @@ def task_create(ctx, name: str, epic: Optional[str], type: str, status: str, no_
             create_file=not no_file
         )
         
-        # Always show task creation result
         click.echo(f"✅ Task created: {task.id} - {click.style(task.name, fg='green', bold=True)}")
         click.echo(f"   Type: {task.type.value}")
         if epic_obj:
             click.echo(f"   Epic: {epic_obj.id} - {epic_obj.name}")
         click.echo(f"   Status: {task.status.value}")
+        if not no_file:
+            click.echo(f"   File: {task.file_path}")
         
-        if not no_context:
-            if not no_file:
-                click.echo(f"   File: {task.file_path}")
-            click.echo("\n---\n")
-            click.echo("## AGENT GUIDANCE\n")
-            click.echo("User should type `#research` to begin working on this task.")
-        
-        # Return task for programmatic use (e.g., in snapshot workflow)
         return task
     except ValueError as e:
         click.echo(f"❌ Error: {e}")
@@ -631,20 +607,19 @@ def context_list(ctx):
     click.echo("\n---\n")
     click.echo("### USAGE\n")
     click.echo("```sh")
-    click.echo("# Load all context types (flags can be combined)")
-    click.echo("moderails context load --memory auth --memory payments --file src/auth.ts")
+    click.echo("# Load context (flags can be combined)")
+    click.echo("moderails context load --mandatory --memory auth --memory payments")
     click.echo("```")
 
 
 @context.command("load")
 @click.option("--mandatory", "-m", is_flag=True, help="Load mandatory context")
 @click.option("--memory", "-M", multiple=True, help="Memory name to load (can specify multiple)")
-@click.option("--file", "-f", multiple=True, help="File path to search tasks (can specify multiple)")
 @click.pass_context
-def context_load(ctx, mandatory: bool, memory: tuple, file: tuple):
-    """Load context: mandatory, memories, and/or files. Flags can be combined."""
-    if not mandatory and not memory and not file:
-        click.echo("❌ Provide --mandatory, --memory, or --file")
+def context_load(ctx, mandatory: bool, memory: tuple):
+    """Load context: mandatory and/or memories. Flags can be combined."""
+    if not mandatory and not memory:
+        click.echo("❌ Provide --mandatory or --memory")
         click.echo("\n💡 Run `moderails context list` to see available options")
         return
     
@@ -674,28 +649,6 @@ def context_load(ctx, mandatory: bool, memory: tuple, file: tuple):
             if available:
                 msg += f"\nAvailable: {', '.join(available)}"
             output_parts.append(msg)
-    
-    # 3. Search task history by file(s)
-    if file:
-        for file_path in file:
-            history_results = services["history"].search_by_file(file_path)
-            
-            if history_results:
-                file_parts = [f"## FILE HISTORY: {file_path}\n"]
-                file_parts.append(f"Found {len(history_results)} related task(s):\n")
-                for result in history_results:
-                    epic_str = f" [{result['epic']}]" if result.get('epic') else ""
-                    file_parts.append(f"**{result['name']}{epic_str}**")
-                    file_parts.append(f"  Status: {result['status']}")
-                    file_parts.append(f"  Summary: {result['summary']}")
-                    if result.get('files_changed'):
-                        file_parts.append(f"  Files: {', '.join(result['files_changed'][:5])}")
-                    if result.get('git_hash'):
-                        file_parts.append(f"  Git: {result['git_hash'][:7]}")
-                    file_parts.append("")
-                output_parts.append("\n".join(file_parts))
-            else:
-                output_parts.append(f"No tasks found for file: {file_path}")
     
     # Output all parts with separators
     click.echo("\n---\n".join(output_parts))
