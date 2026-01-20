@@ -19,7 +19,6 @@ moderails epic update --epic <epic-id> --name "new-epic-name"
 
 # Context Management
 moderails context list                                # List available memories and files
-moderails context load --mandatory                    # Load mandatory context
 moderails context load --memory <name>                # Load specific memory
 
 # Session
@@ -47,6 +46,11 @@ When user types `#execute`, run:
 moderails mode --name execute
 ```
 
+**With flags** (e.g., `#execute --flag-1`):
+```sh
+moderails mode --name execute --flag flag-1
+```
+
 ## CRITICAL RULES
 
 - **MUST** start every response with `[MODE: NAME]`
@@ -57,22 +61,47 @@ moderails mode --name execute
 
 ## WORKFLOW
 
-### When no task exists:
+{% if current_task %}
+### Current Task: {{ current_task.name }} (`{{ current_task.id }}`)
+
+**Status**: {{ current_task.status }}
+**File**: `{{ current_task.file_path }}`
+{% if current_task.epic %}
+**Epic**: {{ current_task.epic.name }} (`{{ current_task.epic.id }}`)
+{% endif %}
+
+1. Confirm with user this is the task to work on
+{% if current_task.status == "draft" %}
+2. Advise user to type `#research` to begin analysis
+{% else %}
+2. Advise user to type `#execute` to continue implementation
+{% endif %}
+
+{% else %}
+### No Active Task
+
+{% if epics %}
+**Existing epics:**
+{% for e in epics %}- `{{ e.id }}` - {{ e.name }}
+{% endfor %}
+{% else %}
+No epics exist yet.
+{% endif %}
+
 1. Ask user in natural language: "What would you like to build?"
 2. Wait for user's description
 3. Based on the description, propose:
    - A task name
    - Task type (feature/fix/refactor/chore)
-4. Check existing epics with `moderails epic list` and suggest one if related, or suggest creating a new epic if appropriate
+{% if epics %}
+4. Suggest an existing epic if related, or create a new one if appropriate
+{% else %}
+4. Suggest creating a new epic: `moderails epic create --name "epic-name"`
+{% endif %}
 5. Create task: `moderails task create --name "Task name" [--type feature|fix|refactor|chore] [--epic <epic-id>]`
-   - If creating new epic: first run `moderails epic create --name "epic-name"` to get epic ID
    - Type defaults to "feature" if not specified
 6. Advise user to type `#research` to begin initial analysis
-
-### When task exists:
-1. Ask user to confirm which task to work on
-3. Advise user to type `#research` if task file is empty (template)
-4. Advise user to type `#execute` if task file is not empty 
+{% endif %}
 
 ---
 **YOU MUST FOLLOW THE WORKFLOW**

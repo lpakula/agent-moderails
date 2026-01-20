@@ -123,6 +123,18 @@ class TaskService:
         if not task:
             return None
         
+        # Enforce single in-progress task
+        if status == TaskStatus.IN_PROGRESS:
+            existing = self.session.query(Task).filter(
+                Task.status == TaskStatus.IN_PROGRESS,
+                Task.id != task_id
+            ).first()
+            if existing:
+                raise ValueError(
+                    f"Task '{existing.id}' ({existing.name}) is already in-progress. "
+                    f"Complete or abort it first."
+                )
+        
         if name is not None:
             task.name = name
         if status:

@@ -196,8 +196,8 @@ class TestTaskCommands:
             assert result.exit_code == 0
             assert "Use --confirm" in result.output
     
-    def test_task_create_no_file_no_context_flags(self, cli_runner):
-        """Test task creation with --no-file and --no-context flags."""
+    def test_task_create_no_file_flag(self, cli_runner):
+        """Test task creation with --no-file flag."""
         with cli_runner.isolated_filesystem():
             cli_runner.invoke(cli, ['init'])
             
@@ -207,7 +207,7 @@ class TestTaskCommands:
             (mandatory_dir / "test-context.md").write_text("Test context content")
             
             # Create task with both flags
-            result = cli_runner.invoke(cli, ['task', 'create', '--name', 'test-task', '--no-file', '--no-context'])
+            result = cli_runner.invoke(cli, ['task', 'create', '--name', 'test-task', '--no-file'])
             
             assert result.exit_code == 0
             assert "Task created:" in result.output
@@ -221,24 +221,16 @@ class TestTaskCommands:
             task_files = list(tasks_dir.glob(f"*{task_id}*.md")) if tasks_dir.exists() else []
             assert len(task_files) == 0
     
-    def test_task_create_default_shows_context_and_creates_file(self, cli_runner):
-        """Test default task creation shows context and creates file."""
+    def test_task_create_default_creates_file(self, cli_runner):
+        """Test default task creation creates file."""
         with cli_runner.isolated_filesystem():
             cli_runner.invoke(cli, ['init'])
-            
-            # Create a mandatory context file
-            mandatory_dir = Path.cwd() / ".moderails" / "context" / "mandatory"
-            mandatory_dir.mkdir(parents=True, exist_ok=True)
-            (mandatory_dir / "test-context.md").write_text("Test context content")
             
             # Create task with defaults
             result = cli_runner.invoke(cli, ['task', 'create', '--name', 'test-task'])
             
             assert result.exit_code == 0
             assert "Task created:" in result.output
-            assert "MANDATORY CONTEXT" in result.output
-            assert "AGENT GUIDANCE" in result.output
-            assert "Test context content" in result.output
             
             # Verify task file WAS created
             task_id = result.output.split("Task created: ")[1].split(" -")[0].strip()
@@ -247,7 +239,7 @@ class TestTaskCommands:
             assert len(task_files) == 1
     
     def test_task_create_no_file_only(self, cli_runner):
-        """Test --no-file flag skips file creation but shows context."""
+        """Test --no-file flag skips file creation."""
         with cli_runner.isolated_filesystem():
             cli_runner.invoke(cli, ['init'])
             
@@ -255,7 +247,6 @@ class TestTaskCommands:
             
             assert result.exit_code == 0
             assert "Task created:" in result.output
-            assert "AGENT GUIDANCE" in result.output
             
             # Verify task file was NOT created
             task_id = result.output.split("Task created: ")[1].split(" -")[0].strip()
@@ -263,35 +254,12 @@ class TestTaskCommands:
             task_files = list(tasks_dir.glob(f"*{task_id}*.md")) if tasks_dir.exists() else []
             assert len(task_files) == 0
     
-    def test_task_create_no_context_only(self, cli_runner):
-        """Test --no-context flag suppresses context but creates file."""
-        with cli_runner.isolated_filesystem():
-            cli_runner.invoke(cli, ['init'])
-            
-            # Create a mandatory context file
-            mandatory_dir = Path.cwd() / ".moderails" / "context" / "mandatory"
-            mandatory_dir.mkdir(parents=True, exist_ok=True)
-            (mandatory_dir / "test-context.md").write_text("Test context content")
-            
-            result = cli_runner.invoke(cli, ['task', 'create', '--name', 'test-task', '--no-context'])
-            
-            assert result.exit_code == 0
-            assert "Task created:" in result.output
-            assert "MANDATORY CONTEXT" not in result.output
-            assert "AGENT GUIDANCE" not in result.output
-            
-            # Verify task file WAS created
-            task_id = result.output.split("Task created: ")[1].split(" -")[0].strip()
-            tasks_dir = Path.cwd() / ".moderails" / "tasks"
-            task_files = list(tasks_dir.glob(f"*{task_id}*.md"))
-            assert len(task_files) == 1
-    
     def test_task_create_with_in_progress_status(self, cli_runner):
         """Test task creation with in-progress status."""
         with cli_runner.isolated_filesystem():
             cli_runner.invoke(cli, ['init'])
             
-            result = cli_runner.invoke(cli, ['task', 'create', '--name', 'test-task', '--status', 'in-progress', '--no-context'])
+            result = cli_runner.invoke(cli, ['task', 'create', '--name', 'test-task', '--status', 'in-progress'])
             
             assert result.exit_code == 0
             assert "Task created:" in result.output
@@ -302,7 +270,7 @@ class TestTaskCommands:
         with cli_runner.isolated_filesystem():
             cli_runner.invoke(cli, ['init'])
             
-            result = cli_runner.invoke(cli, ['task', 'create', '--name', 'test-task', '--no-context'])
+            result = cli_runner.invoke(cli, ['task', 'create', '--name', 'test-task'])
             
             assert result.exit_code == 0
             assert "Task created:" in result.output

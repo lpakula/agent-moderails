@@ -66,6 +66,49 @@ def get_staged_files(cwd: str = ".") -> list[str]:
     return files
 
 
+def get_current_branch(cwd: str = ".") -> str | None:
+    """
+    Get the current git branch name.
+    
+    Returns:
+        Branch name or None if not in a git repo or detached HEAD
+    """
+    output = _run_git(["branch", "--show-current"], cwd)
+    if not output:
+        return None
+    return output.strip() or None
+
+
+def get_unstaged_files(cwd: str = ".") -> list[str]:
+    """
+    Get list of unstaged modified files (tracked files with changes not staged).
+    
+    Returns:
+        List of file paths with unstaged changes
+    """
+    output = _run_git(["diff", "--name-only"], cwd)
+    if not output:
+        return []
+    
+    files = []
+    for line in output.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        
+        # Check if file matches any excluded pattern
+        excluded = False
+        for pattern in EXCLUDED_PATTERNS:
+            if pattern in line:
+                excluded = True
+                break
+        
+        if not excluded:
+            files.append(line)
+    
+    return files
+
+
 def get_commit_meta(hash: str, cwd: str = ".") -> tuple[str, str]:
     """
     Get commit hash and subject line.

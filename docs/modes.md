@@ -50,8 +50,11 @@ The agent breaks down the work into atomic TODO items in the task file. Review a
 
 Implement TODO items one by one. Mark each item complete `[x]` in the task file.
 
->[!TIP]
-> Type `--no-confirmation` to work through all TODOs without stopping for confirmation between items.
+### Flags
+
+| Flag | Effect |
+|------|--------|
+| `--no-confirmation` | Batch mode - work through all TODOs without stopping |
 
 **Adjusting the plan:** No plan is perfect. You can adjust the approach along the way — add items, modify steps, or change direction. All changes are recorded in the task file, which remains the single source of truth throughout execution.
 

@@ -3,43 +3,58 @@
 **Active Mode**: RESEARCH  
 **Output Format**: Start with `[MODE: RESEARCH]`
 
+{% if mandatory_context %}
+---
+
+{{ mandatory_context }}
+
+---
+{% endif %}
+
+## AVAILABLE CONTEXT
+
+### MEMORIES
+{% if memories %}
+{% for m in memories %}- {{ m }}
+{% endfor %}
+{% else %}
+No memories available.
+{% endif %}
+
+### FILES (from past tasks)
+{% if files_tree %}
+{{ files_tree }}
+{% else %}
+No files in history yet.
+{% endif %}
+
+---
+
 ## PURPOSE
-Information gathering and proposing implementation approach. 
+
+Information gathering and proposing implementation approach.
 
 ## WORKFLOW
 
-1. Begin initial analysis based on the initial user task description:
-   - Understand what needs to be built
-   - Identify what parts of the codebase might be relevant
-   - Task plan and mandatory context are already available
+1. Review the mandatory context above (already loaded)
 
-2. Load the task
-   `moderails task load --task <task-id>`   
+2. Load additional memories if relevant to the task
+```sh
+moderails context load --memory <name>
+```
 
-3. Discover available context:
-   ```sh
-   moderails context list
-   ```
-   This shows available memories and files touched by past tasks.
-
-3. Load relevant context (flags can be combined):
-   ```sh
-   moderails context load --memory auth --memory payments --file src/auth.ts
-   ```
-   Load specific memories.
-
-5. Explore the codebase:
+3. Explore the codebase:
    - Read relevant files
    - Understand existing patterns
    - Identify dependencies
 
-6. Propose implementation approach:
+4. Propose implementation approach:
    - Make informed decisions based on the codebase
    - Suggest concrete solutions
    - Be autonomous - user can always ask to change your suggestions
    - Only ask questions for critical decisions where multiple approaches have significant trade-offs
 
-7. When ready, suggest:
+5. When ready, suggest:
    - `#brainstorm` — if exploring alternative approaches would be valuable
    - `#plan` — to proceed with defining the implementation plan
 
@@ -60,18 +75,19 @@ When you do need to ask, use this format:
 This allows users to respond with "1a" or "2b,c". Keep questions minimal - user can always request changes to your suggestions.
 
 ## PERMITTED
+
 - Read codebase files, docs, structure
 - Summarize existing behavior
-- Discover context with `moderails context list`
-- Load context with `moderails context load --memory <name> --file <path>`
+- Load context with `moderails context load --memory <name>`
 - Propose implementation approaches
 - Make informed decisions autonomously
 - Ask only critical questions
 
 ## FORBIDDEN
+
 - No code changes
 - No task file editing
-- No excessive questioning (be autonomous, propose solutions) 
+- No excessive questioning (be autonomous, propose solutions)
 
 ---
 **YOU MUST FOLLOW THE WORKFLOW**

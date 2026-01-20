@@ -133,7 +133,7 @@ class TestTaskService:
         task = task_service.create("test-task", epic.id)
         
         assert task.name == "test-task"
-        assert task.file_name.startswith("tasks/test-epic--test-task-")
+        assert task.file_name.startswith("tasks/test-epic/test-task-")
         assert task.status == TaskStatus.DRAFT
     
     def test_create_task_creates_file(self, test_db, temp_dir):
@@ -246,4 +246,61 @@ class TestTaskService:
         assert content is not None
         assert "# TASK NAME" in content
         assert "SUMMARY" in content
+    
+    def test_single_in_progress_enforcement(self, test_db, temp_dir):
+        """Test that only one task can be in-progress at a time."""
+        import pytest
+        
+        epic_service = EpicService(test_db)
+        epic = epic_service.create("test-epic")
+        
+        task_service = TaskService(test_db, temp_dir)
+        task1 = task_service.create("task-1", epic.id)
+        task2 = task_service.create("task-2", epic.id)
+        
+        # Set first task to in-progress
+        task_service.update(task1.id, status=TaskStatus.IN_PROGRESS)
+        
+        # Try to set second task to in-progress - should fail
+        with pytest.raises(ValueError) as exc_info:
+            task_service.update(task2.id, status=TaskStatus.IN_PROGRESS)
+        
+        assert "already in-progress" in str(exc_info.value)
+        assert task1.id in str(exc_info.value)
+    
+    def test_single_in_progress_allows_same_task(self, test_db, temp_dir):
+        """Test that updating the same in-progress task is allowed."""
+        epic_service = EpicService(test_db)
+        epic = epic_service.create("test-epic")
+        
+        task_service = TaskService(test_db, temp_dir)
+        task = task_service.create("task-1", epic.id)
+        
+        # Set to in-progress
+        task_service.update(task.id, status=TaskStatus.IN_PROGRESS)
+        
+        # Update the same task again (e.g., adding summary) - should work
+        updated = task_service.update(task.id, status=TaskStatus.IN_PROGRESS, summary="New summary")
+        
+        assert updated is not None
+        assert updated.summary == "New summary"
+    
+    def test_in_progress_after_completing_previous(self, test_db, temp_dir):
+        """Test that a new task can be in-progress after completing previous."""
+        epic_service = EpicService(test_db)
+        epic = epic_service.create("test-epic")
+        
+        task_service = TaskService(test_db, temp_dir)
+        task1 = task_service.create("task-1", epic.id)
+        task2 = task_service.create("task-2", epic.id)
+        
+        # Set first task to in-progress, then complete it
+        task_service.update(task1.id, status=TaskStatus.IN_PROGRESS)
+        task_service.update(task1.id, status=TaskStatus.COMPLETED)
+        
+        # Now second task can be in-progress
+        updated = task_service.update(task2.id, status=TaskStatus.IN_PROGRESS)
+        
+        assert updated is not None
+        assert updated.status == TaskStatus.IN_PROGRESS
 

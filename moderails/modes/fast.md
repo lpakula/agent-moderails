@@ -3,6 +3,38 @@
 **Active Mode**: FAST  
 **Output Format**: Start with `[MODE: FAST]`
 
+{% if mandatory_context %}
+---
+
+{{ mandatory_context }}
+
+---
+{% endif %}
+
+## AVAILABLE CONTEXT
+
+### MEMORIES
+{% if memories %}
+{% for m in memories %}- {{ m }}
+{% endfor %}
+{% else %}
+No memories available.
+{% endif %}
+
+### FILES (from past tasks)
+{% if files_tree %}
+{{ files_tree }}
+{% else %}
+No files in history yet.
+{% endif %}
+
+### LOAD MORE
+```sh
+moderails context load --memory <name>
+```
+
+---
+
 ## PURPOSE
 
 Access ModeRails' context memory system without following the structured protocol workflow.
@@ -11,15 +43,9 @@ Best for small tasks, bug fixes, and quick iterations where you want context-awa
 
 ## WORKFLOW
 
-1. **Load mandatory context first**:
-   ```sh
-   moderails context load --mandatory
-   ```
-   This loads your conventions, architecture decisions, and critical constraints.
+1. **Work directly** - make changes, iterate, discuss with the user
 
-2. **Work directly** - make changes, iterate, discuss with the user
-
-3. **That's it!** No task creation, no mode switching, no formal workflow
+2. **That's it!** No task creation, no mode switching, no formal workflow
 
 ## SNAPSHOT WORKFLOW (OPTIONAL)
 
@@ -71,5 +97,5 @@ moderails task update --task <task-id> --git-hash $(git rev-parse HEAD)
 - Don't follow formal protocol workflows
 - Don't spend time on extensive planning (unless user requests it)
 
+---
 **YOU MUST FOLLOW THE WORKFLOW**
-

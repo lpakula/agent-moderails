@@ -12,6 +12,7 @@ from . import __version__
 from .db.database import find_db_path, get_session, init_db
 from .db.models import TaskStatus, TaskType
 from .modes import get_mode
+from .utils.context import build_mode_context
 from .services import ContextService, EpicService, TaskService
 from .services.history import HistoryService
 from .utils import (
@@ -326,10 +327,17 @@ def task_delete(ctx, task_id: str, confirm: bool):
 @task.command("complete")
 @click.option("--task", "-t", "task_id", required=True, help="Task ID (6-character)")
 @click.option("--summary", "-s", help="Task summary")
+@click.option("--commit-message", "-m", required=True, help="Git commit message")
 @click.pass_context
-def task_complete(ctx, task_id: str, summary: Optional[str]):
-    """Mark task as completed"""
+def task_complete(ctx, task_id: str, summary: Optional[str], commit_message: str):
+    """Mark task as completed and commit changes.
+    
+    Stages history.jsonl, commits with provided message, and updates task with git hash.
+    If any git step fails, returns fallback instructions for manual completion.
+    """
     services = get_services_or_exit(ctx)
+    moderails_dir = get_moderails_dir(ctx.obj.get("db_path"))
+    history_path = moderails_dir / "history.jsonl"
     
     # Check for staged files (required for files_changed in history)
     staged_files = get_staged_files()
@@ -345,36 +353,101 @@ def task_complete(ctx, task_id: str, summary: Optional[str]):
         if summary:
             services["task"].update(task_id, summary=summary)
         
-        # Complete the task (without git hash - that comes later via task update)
+        # Complete the task
         task = services["task"].complete(task_id, git_hash=None)
         click.echo(f"✅ Task completed: {task.id} - {task.name}")
         
-        # Export to history.jsonl and stage it
+        # Export to history.jsonl
         services["history"].export_task(task_id)
+        click.echo("✅ Exported to history.jsonl")
         
-        # Try to auto-stage history.jsonl for the commit (may fail in restricted environments)
-        moderails_dir = get_moderails_dir(ctx.obj.get("db_path"))
-        history_path = moderails_dir / "history.jsonl"
-        try:
-            # Small delay to let file watchers settle and avoid git index.lock race
-            time.sleep(0.2)
-            result = subprocess.run(
-                ["git", "add", str(history_path)],
-                check=False,
-                capture_output=True,
-                text=True
-            )
-            if result.returncode == 0:
-                click.echo("✅ Exported and staged history.jsonl")
-            else:
-                click.echo("✅ Exported history.jsonl")
-                click.echo(f"⚠️  Could not auto-stage (run: git add {history_path})")
-        except Exception:
-            click.echo("✅ Exported history.jsonl")
-            click.echo(f"💡 Stage manually: git add {history_path}")
+        # === Automated Git Workflow ===
+        
+        # Step 1: Stage history.jsonl
+        time.sleep(0.2)  # Let file watchers settle
+        stage_result = subprocess.run(
+            ["git", "add", str(history_path)],
+            check=False,
+            capture_output=True,
+            text=True
+        )
+        if stage_result.returncode != 0:
+            click.echo("⚠️  Failed to stage history.jsonl")
+            click.echo("\n## FALLBACK: Complete git workflow manually")
+            click.echo("```bash")
+            click.echo(f"git add {history_path}")
+            click.echo(f"git commit -m \"{commit_message}\"")
+            click.echo(f"moderails task update --task {task_id} --git-hash $(git rev-parse HEAD)")
+            click.echo("```")
+            if stage_result.stderr:
+                click.echo(f"\nGit error: {stage_result.stderr.strip()}")
+            return
+        
+        click.echo("✅ Staged history.jsonl")
+        
+        # Step 2: Commit
+        commit_result = subprocess.run(
+            ["git", "commit", "-m", commit_message],
+            check=False,
+            capture_output=True,
+            text=True
+        )
+        if commit_result.returncode != 0:
+            click.echo("⚠️  Commit failed")
+            click.echo("\n## FALLBACK: Complete git workflow manually")
+            click.echo("```bash")
+            click.echo(f"git commit -m \"{commit_message}\"")
+            click.echo(f"moderails task update --task {task_id} --git-hash $(git rev-parse HEAD)")
+            click.echo("```")
+            if commit_result.stderr:
+                click.echo(f"\nGit error: {commit_result.stderr.strip()}")
+            return
+        
+        click.echo(f"✅ Committed: {commit_message}")
+        
+        # Step 3: Get git hash and update task
+        hash_result = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            check=False,
+            capture_output=True,
+            text=True
+        )
+        if hash_result.returncode != 0:
+            click.echo("⚠️  Could not get git hash")
+            click.echo("\n## FALLBACK: Update task with git hash manually")
+            click.echo("```bash")
+            click.echo(f"moderails task update --task {task_id} --git-hash $(git rev-parse HEAD)")
+            click.echo("```")
+            return
+        
+        git_hash = hash_result.stdout.strip()
+        services["task"].update(task_id, git_hash=git_hash)
+        click.echo(f"✅ Updated task with git hash: {git_hash[:7]}")
+        click.echo(f"\n🎉 Task {task_id} fully completed and committed!")
         
     except ValueError as e:
         click.echo(f"❌ {e}")
+
+
+def _try_stage_history(history_path: Path) -> bool:
+    """Try to stage history.jsonl, return True if successful."""
+    try:
+        time.sleep(0.2)
+        result = subprocess.run(
+            ["git", "add", str(history_path)],
+            check=False,
+            capture_output=True,
+            text=True
+        )
+        if result.returncode == 0:
+            click.echo("✅ Staged history.jsonl")
+            return True
+        else:
+            click.echo(f"⚠️  Could not auto-stage (run: git add {history_path})")
+            return False
+    except Exception:
+        click.echo(f"💡 Stage manually: git add {history_path}")
+        return False
 
 
 @task.command("list")
@@ -414,12 +487,6 @@ def task_load(ctx, task_id: str):
     """Load task details and epic context."""
     services = get_services_or_exit(ctx)
     moderails_dir = get_moderails_dir(ctx.obj.get("db_path"))
-    
-    # Load mandatory context
-    mandatory_context = services["context"].load_mandatory_context()
-    if mandatory_context:
-        click.echo(mandatory_context)
-        click.echo("\n---\n")
     
     # Get task
     task = services["task"].get(task_id)
@@ -522,15 +589,24 @@ def epic_list(ctx):
 
 @cli.command("mode")
 @click.option("--name", "-n", required=True, help="Mode name")
+@click.option("--flag", "-f", multiple=True, help="Mode flags (e.g., --flag no-confirmation)")
 @click.pass_context
-def mode(ctx, name: str):
-    """Get mode definition. Use when switching modes (e.g., //execute)."""
+def mode(ctx, name: str, flag: tuple):
+    """Get mode definition with dynamic context. Use when switching modes (e.g., #execute --flag no-confirmation)."""
     valid_modes = ["fast", "research", "brainstorm", "plan", "execute", "complete", "abort"]
     if name not in valid_modes:
         click.echo(f"❌ Invalid mode. Valid modes: {', '.join(valid_modes)}")
         return
     
-    click.echo(get_mode(name))
+    # Build dynamic context for template rendering
+    try:
+        services = get_services(ctx.obj.get("db_path"))
+        mode_context = build_mode_context(services, name, flags=list(flag))
+    except FileNotFoundError:
+        # No database - render without context (but still pass flags)
+        mode_context = {"flags": list(flag)}
+    
+    click.echo(get_mode(name, mode_context))
 
 
 # ============== LIST ==============

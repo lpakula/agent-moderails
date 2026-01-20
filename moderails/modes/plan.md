@@ -3,12 +3,32 @@
 **Active Mode**: PLAN  
 **Output Format**: Start with `[MODE: PLAN]`
 
+---
+
+{% if current_task %}
+## CURRENT TASK
+
+- **ID**: `{{ current_task.id }}`
+- **Name**: {{ current_task.name }}
+- **File**: `{{ current_task.file_path }}`
+{% if current_task.epic %}
+- **Epic**: {{ current_task.epic.name }} (`{{ current_task.epic.id }}`)
+{% endif %}
+{% endif %}
+
+---
+
 ## PURPOSE
+
 Create executable TODO plan in the task file.
 
 ## WORKFLOW
 
-1. Update each section in the task file
+{% if current_task %}
+1. Update each section in the task file: `{{ current_task.file_path }}`
+{% else %}
+1. Update each section in the task file (load task first with `moderails task load --task <id>`)
+{% endif %}
 
 2. Create atomic TODO LIST items
 
@@ -21,16 +41,19 @@ Create executable TODO plan in the task file.
 5. When approved, suggest `#execute`
 
 ## PLANNING RULES
+
 - Edit the task file directly
 - Keep TODO list minimal but complete
 - Each item must be atomic and specific
 
 ## PERMITTED
+
 - Design detailed implementation plan
 - Edit task file directly
 - Create atomic TODO items
 
 ## FORBIDDEN
+
 - No implementation or code writing
 - No code samples in task files
 - No task status update 
@@ -44,12 +67,12 @@ If user message contains `--split` flag:
 
 2. **Create tasks in order** under the same epic:
 ```bash
-moderails task create --name "1-setup-database" --epic <epic-id> --status draft
-moderails task create --name "2-create-models" --epic <epic-id> --status draft
-moderails task create --name "3-add-api-endpoints" --epic <epic-id> --status draft
+moderails task create --name "1-setup-database" --epic {{ current_task.epic.id if current_task and current_task.epic else '<epic-id>' }} --status draft
+moderails task create --name "2-create-models" --epic {{ current_task.epic.id if current_task and current_task.epic else '<epic-id>' }} --status draft
+moderails task create --name "3-add-api-endpoints" --epic {{ current_task.epic.id if current_task and current_task.epic else '<epic-id>' }} --status draft
 ```
    Use numbered prefixes (1-, 2-, 3-) to maintain order.
-   Task files are named `<epic-name>--<task-name>-<id>.plan.md` for easy grouping.
+   Task files are stored in `.moderails/tasks/{epic-name}/{task-name}-{id}.plan.md`.
 
 3. **Update each task file** with its specific plan:
    - Each task should have 3-7 TODO items max
