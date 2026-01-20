@@ -49,38 +49,26 @@ Best for small tasks, bug fixes, and quick iterations where you want context-awa
 
 ## SNAPSHOT WORKFLOW (OPTIONAL)
 
-If the user types `--snapshot`, preserve your work in task history for future context searches. Create a task entry and structured commit in one go:
+If the user types `--snapshot`, preserve your work in task history for future context searches:
 
 1. Create task with `in-progress` status, skip file creation:
 ```sh
 moderails task create --name "<descriptive-task-name>" --type <feature|fix|refactor|chore> --status in-progress --no-file
 ```
-   Note the returned task ID. The `--no-file` flag skips task file creation (no plan file needed for snapshots).
+   Note the returned task ID.
 
-2. Review and stage changes for this task:
+2. Stage changes for this task:
 ```bash
-git status
 git add <file1> <file2> <file3>...
 ```
    Stage only the files that are part of this task. Do NOT use `git add -A`.
 
-3. Complete the task (exports staged files to history.jsonl and auto-stages it):
+3. Complete the task (auto-commits and updates git hash):
 ```sh
-moderails task complete --task <task-id> --summary "<brief summary>"
+moderails task complete --task <task-id> --commit-message "<type>: <description>" [--summary "<brief summary>"]
 ```
 
-4. Commit:
-```sh
-git commit -m "<type>: <task-name> - <brief description>"
-```
-   Use conventional commit format matching the task type.
-
-5. Update task with git hash:
-```sh
-moderails task update --task <task-id> --git-hash $(git rev-parse HEAD)
-```
-
-**Result**: Structured commit with searchable task history preserved for future context, without leaving Fast mode or creating plan files.
+**Result**: Structured commit with searchable task history preserved for future context.
 
 ## PERMITTED
 

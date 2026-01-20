@@ -43,7 +43,8 @@ class TestStartCommand:
             result = cli_runner.invoke(cli, ['start'])
             
             assert result.exit_code == 0
-            assert "CURRENT STATUS" in result.output or "No epics yet" in result.output
+            # Template shows status section
+            assert "No active tasks" in result.output or "Current Task:" in result.output
     
     def test_start_with_task(self, cli_runner):
         """Test start command with an existing task."""
@@ -70,7 +71,8 @@ class TestStartCommand:
             result = cli_runner.invoke(cli, ['start'])
             
             assert result.exit_code == 0
-            assert "CURRENT STATUS" in result.output
+            # Template shows current task info dynamically
+            assert "Current Task: test-task" in result.output
 
 
 class TestStatusCommand:

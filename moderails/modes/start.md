@@ -77,31 +77,31 @@ moderails mode --name execute --flag flag-1
 2. Advise user to type `#execute` to continue implementation
 {% endif %}
 
-{% else %}
-### No Active Task
+{%- else %}
+### Status
 
-{% if epics %}
-**Existing epics:**
-{% for e in epics %}- `{{ e.id }}` - {{ e.name }}
-{% endfor %}
-{% else %}
-No epics exist yet.
+- No active tasks
+{% if epics -%}
+- Epics:
+{% for e in epics %}  - `{{ e.id }}` - {{ e.name }}
+{% endfor -%}
+{% else -%}
+- No epics
 {% endif %}
-
 1. Ask user in natural language: "What would you like to build?"
 2. Wait for user's description
 3. Based on the description, propose:
    - A task name
    - Task type (feature/fix/refactor/chore)
-{% if epics %}
+{% if epics -%}
 4. Suggest an existing epic if related, or create a new one if appropriate
-{% else %}
-4. Suggest creating a new epic: `moderails epic create --name "epic-name"`
-{% endif %}
+{% else -%}
+4. Create a new epic: `moderails epic create --name "epic-name"`
+{% endif -%}
 5. Create task: `moderails task create --name "Task name" [--type feature|fix|refactor|chore] [--epic <epic-id>]`
    - Type defaults to "feature" if not specified
 6. Advise user to type `#research` to begin initial analysis
-{% endif %}
+{%- endif %}
 
 ---
 **YOU MUST FOLLOW THE WORKFLOW**

@@ -46,8 +46,8 @@ class TestAllModesRender:
         result = get_mode("start", context)
         
         assert "# Moderails Protocol" in result
-        assert "No Active Task" in result
-        assert "No epics exist yet" in result
+        assert "No active tasks" in result
+        assert "No epics" in result
     
     def test_start_mode_renders_with_epics(self):
         """Test start mode renders with existing epics."""
@@ -280,7 +280,7 @@ class TestGetMode:
         
         result = get_mode("start", context)
         
-        assert "No Active Task" in result
+        assert "No active tasks" in result
         assert "What would you like to build" in result
     
     def test_get_mode_invalid_mode(self):

@@ -172,58 +172,16 @@ def start(ctx):
     if check_and_migrate():
         click.echo()  # Add blank line after migration message
     
-    # Print protocol overview with CLI commands
-    click.echo(get_mode("start"))
-    click.echo("\n---\n")
-    
+    # Build context for start mode (includes current task and epics)
     try:
         services = get_services(ctx.obj.get("db_path"))
+        mode_context = build_mode_context(services, "start")
     except FileNotFoundError:
         click.echo("No moderails database found. Run `moderails init` first.")
         return
     
-    # Show current status
-    all_tasks = services["task"].list_all()
-    epics = services["epic"].list_all()
-    
-    # Filter to only show todo and in-progress tasks
-    tasks = [t for t in all_tasks if t.status in [TaskStatus.DRAFT, TaskStatus.IN_PROGRESS]]
-    
-    click.echo("## CURRENT STATUS\n")
-    
-    if not tasks and not epics:
-        click.echo("No tasks in progress.")
-        return
-    
-    if not tasks:
-        click.echo("No active tasks (all tasks completed).")
-        return
-    
-    # Sort tasks by created_at, newest at top (reverse=True)
-    sorted_tasks = sorted(tasks, key=lambda x: x.created_at, reverse=True)
-    
-    # Display flat list with details
-    for idx, t in enumerate(sorted_tasks, 1):
-        click.echo(f"{idx}. Task ID: {t.id}  (use this ID for commands)")
-        click.echo(f"   Name: {t.name}")
-        click.echo(f"   Type: {t.type.value}")
-        
-        # Epic (if any)
-        if t.epic:
-            click.echo(f"   Epic: {t.epic.name}")
-        
-        # Status
-        click.echo(f"   Status: {t.status.value}")
-        
-        # Timestamp
-        if t.status == TaskStatus.COMPLETED and t.completed_at:
-            timestamp = t.completed_at.strftime("%Y-%m-%d %H:%M")
-            click.echo(f"   Completed: {timestamp}")
-        else:
-            timestamp = t.created_at.strftime("%Y-%m-%d %H:%M")
-            click.echo(f"   Created: {timestamp}")
-        
-        click.echo()  # Empty line between tasks
+    # Print protocol overview with dynamic context
+    click.echo(get_mode("start", mode_context))
     
 
 

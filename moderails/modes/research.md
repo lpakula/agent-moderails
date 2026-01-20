@@ -36,25 +36,21 @@ Information gathering and proposing implementation approach.
 
 ## WORKFLOW
 
-1. Review the mandatory context above (already loaded)
+1. Load additional memories if relevant to the task:
+   `moderails context load --memory <name>`
 
-2. Load additional memories if relevant to the task
-```sh
-moderails context load --memory <name>
-```
-
-3. Explore the codebase:
+2. Explore the codebase:
    - Read relevant files
    - Understand existing patterns
    - Identify dependencies
 
-4. Propose implementation approach:
+3. Propose implementation approach:
    - Make informed decisions based on the codebase
    - Suggest concrete solutions
    - Be autonomous - user can always ask to change your suggestions
    - Only ask questions for critical decisions where multiple approaches have significant trade-offs
 
-5. When ready, suggest:
+4. When ready, suggest:
    - `#brainstorm` — if exploring alternative approaches would be valuable
    - `#plan` — to proceed with defining the implementation plan
 
