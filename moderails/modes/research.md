@@ -11,12 +11,28 @@
 ---
 {% endif %}
 
+{% if current_task %}
+## CURRENT TASK
+
+- **ID**: `{{ current_task.id }}`
+- **Name**: {{ current_task.name }}
+- **Type**: {{ current_task.type }}
+- **File**: `{{ current_task.file_path }}`
+{% if current_task.epic %}- **Epic**: {{ current_task.epic.name }} (`{{ current_task.epic.id }}`){% endif %}
+{% endif %}
+
+{% if epic_context %}
+## EPIC CONTEXT
+
+{{ epic_context }}
+{% endif %}
+
 ## AVAILABLE CONTEXT
 
 ### MEMORIES
 {% if memories %}
 {% for m in memories %}- {{ m }}
-{% endfor %}
+{% endfor -%}
 {% else %}
 No memories available.
 {% endif %}

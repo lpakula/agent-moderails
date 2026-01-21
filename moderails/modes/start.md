@@ -64,29 +64,34 @@ moderails mode --name execute --flag flag-1
 {% if current_task %}
 ### Current Task: {{ current_task.name }} (`{{ current_task.id }}`)
 
-**Status**: {{ current_task.status }}
-**File**: `{{ current_task.file_path }}`
-{% if current_task.epic %}
-**Epic**: {{ current_task.epic.name }} (`{{ current_task.epic.id }}`)
-{% endif %}
+- **Status**: in-progress
+- **Type**: {{ current_task.type }}
+{% if current_task.has_plan_file %}- **Plan**: `{{ current_task.file_path }}`{% endif %}
+{% if current_task.epic %}- **Epic**: {{ current_task.epic.name }} (`{{ current_task.epic.id }}`){% endif %}
 
 1. Confirm with user this is the task to work on
-{% if current_task.status == "draft" %}
-2. Advise user to type `#research` to begin analysis
-{% else %}
+{% if current_task.has_plan_file -%}
 2. Advise user to type `#execute` to continue implementation
-{% endif %}
-
-{%- else %}
-### Status
-
-- No active tasks
-{% if epics -%}
-- Epics:
-{% for e in epics %}  - `{{ e.id }}` - {{ e.name }}
-{% endfor -%}
 {% else -%}
-- No epics
+2. Advise user to type `#research` to begin analysis
+{%- endif %}
+
+{% elif draft_tasks %}
+### No Active Task
+
+**Draft tasks available:**
+{% for t in draft_tasks %}- `{{ t.id }}` - {{ t.name }}{% if t.epic %} ({{ t.epic.name }}){% endif %}
+{% endfor %}
+1. Ask user which draft to start, or create a new task
+2. To start a draft: `moderails task update --task <id> --status in-progress`
+3. Advise user to type `#research` to begin analysis
+
+{% else %}
+### No Tasks
+{% if epics %}
+**Existing epics:**
+{% for e in epics %}- `{{ e.id }}` - {{ e.name }}
+{% endfor %}
 {% endif %}
 1. Ask user in natural language: "What would you like to build?"
 2. Wait for user's description
@@ -94,13 +99,12 @@ moderails mode --name execute --flag flag-1
    - A task name
    - Task type (feature/fix/refactor/chore)
 {% if epics -%}
-4. Suggest an existing epic if related, or create a new one if appropriate
+4. Suggest an existing epic if related, or create a new one
 {% else -%}
 4. Create a new epic: `moderails epic create --name "epic-name"`
 {% endif -%}
 5. Create task: `moderails task create --name "Task name" [--type feature|fix|refactor|chore] [--epic <epic-id>]`
-   - Type defaults to "feature" if not specified
-6. Advise user to type `#research` to begin initial analysis
+6. Advise user to type `#research` to begin analysis
 {%- endif %}
 
 ---

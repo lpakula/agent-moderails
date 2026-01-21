@@ -51,9 +51,9 @@ Best for small tasks, bug fixes, and quick iterations where you want context-awa
 
 If the user types `--snapshot`, preserve your work in task history for future context searches:
 
-1. Create task with `in-progress` status, skip file creation:
+1. Create a draft task (no file created, avoids blocking existing in-progress task):
 ```sh
-moderails task create --name "<descriptive-task-name>" --type <feature|fix|refactor|chore> --status in-progress --no-file
+moderails task create --name "<descriptive-task-name>" --type <feature|fix|refactor|chore> --status draft
 ```
    Note the returned task ID.
 

@@ -5,25 +5,13 @@
 
 ---
 
-{% if current_task %}
-## CURRENT TASK
-
-- **Name**: {{ current_task.name }}
-- **File**: `{{ current_task.file_path }}`
-{% if current_task.epic %}
-- **Epic**: {{ current_task.epic.name }}
-{% endif %}
-{% endif %}
-
----
-
 ## PURPOSE
 
 Optional mode to explore alternative approaches.
 
 ## WORKFLOW
 
-1. Read the task file: `{{ current_task.file_path }}`
+1. Read the task file to understand the problem
 
 2. Propose up to 3 distinct approaches:
    - **Idea A** - Description, Pros, Cons

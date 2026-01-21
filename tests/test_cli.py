@@ -43,8 +43,8 @@ class TestStartCommand:
             result = cli_runner.invoke(cli, ['start'])
             
             assert result.exit_code == 0
-            # Template shows status section
-            assert "No active tasks" in result.output or "Current Task:" in result.output
+            # Template shows workflow section
+            assert "No Tasks" in result.output or "Current Task:" in result.output or "No Active Task" in result.output
     
     def test_start_with_task(self, cli_runner):
         """Test start command with an existing task."""
@@ -198,85 +198,57 @@ class TestTaskCommands:
             assert result.exit_code == 0
             assert "Use --confirm" in result.output
     
-    def test_task_create_no_file_flag(self, cli_runner):
-        """Test task creation with --no-file flag."""
+    def test_task_create_no_file_by_default(self, cli_runner):
+        """Test task creation does NOT create file by default (file created in #plan mode)."""
         with cli_runner.isolated_filesystem():
             cli_runner.invoke(cli, ['init'])
             
-            # Create a mandatory context file
-            mandatory_dir = Path.cwd() / ".moderails" / "context" / "mandatory"
-            mandatory_dir.mkdir(parents=True, exist_ok=True)
-            (mandatory_dir / "test-context.md").write_text("Test context content")
-            
-            # Create task with both flags
-            result = cli_runner.invoke(cli, ['task', 'create', '--name', 'test-task', '--no-file'])
-            
-            assert result.exit_code == 0
-            assert "Task created:" in result.output
-            assert "MANDATORY CONTEXT" not in result.output
-            assert "AGENT GUIDANCE" not in result.output
-            assert "Test context content" not in result.output
-            
-            # Verify task file was NOT created
-            task_id = result.output.split("Task created: ")[1].split(" -")[0].strip()
-            tasks_dir = Path.cwd() / ".moderails" / "tasks"
-            task_files = list(tasks_dir.glob(f"*{task_id}*.md")) if tasks_dir.exists() else []
-            assert len(task_files) == 0
-    
-    def test_task_create_default_creates_file(self, cli_runner):
-        """Test default task creation creates file."""
-        with cli_runner.isolated_filesystem():
-            cli_runner.invoke(cli, ['init'])
-            
-            # Create task with defaults
             result = cli_runner.invoke(cli, ['task', 'create', '--name', 'test-task'])
             
             assert result.exit_code == 0
             assert "Task created:" in result.output
             
-            # Verify task file WAS created
-            task_id = result.output.split("Task created: ")[1].split(" -")[0].strip()
-            tasks_dir = Path.cwd() / ".moderails" / "tasks"
-            task_files = list(tasks_dir.glob(f"*{task_id}*.md"))
-            assert len(task_files) == 1
-    
-    def test_task_create_no_file_only(self, cli_runner):
-        """Test --no-file flag skips file creation."""
-        with cli_runner.isolated_filesystem():
-            cli_runner.invoke(cli, ['init'])
-            
-            result = cli_runner.invoke(cli, ['task', 'create', '--name', 'test-task', '--no-file'])
-            
-            assert result.exit_code == 0
-            assert "Task created:" in result.output
-            
-            # Verify task file was NOT created
+            # Verify task file was NOT created (created in #plan mode instead)
             task_id = result.output.split("Task created: ")[1].split(" -")[0].strip()
             tasks_dir = Path.cwd() / ".moderails" / "tasks"
             task_files = list(tasks_dir.glob(f"*{task_id}*.md")) if tasks_dir.exists() else []
             assert len(task_files) == 0
     
-    def test_task_create_with_in_progress_status(self, cli_runner):
-        """Test task creation with in-progress status."""
+    def test_task_create_default_status_is_in_progress(self, cli_runner):
+        """Test task creation defaults to in-progress status."""
         with cli_runner.isolated_filesystem():
             cli_runner.invoke(cli, ['init'])
             
-            result = cli_runner.invoke(cli, ['task', 'create', '--name', 'test-task', '--status', 'in-progress'])
+            result = cli_runner.invoke(cli, ['task', 'create', '--name', 'test-task'])
             
             assert result.exit_code == 0
             assert "Task created:" in result.output
             assert "Status: in-progress" in result.output
     
-    def test_task_create_default_status_is_draft(self, cli_runner):
-        """Test task creation defaults to draft status."""
+    def test_task_create_with_draft_status(self, cli_runner):
+        """Test task creation with explicit draft status."""
         with cli_runner.isolated_filesystem():
             cli_runner.invoke(cli, ['init'])
             
-            result = cli_runner.invoke(cli, ['task', 'create', '--name', 'test-task'])
+            result = cli_runner.invoke(cli, ['task', 'create', '--name', 'test-task', '--status', 'draft'])
             
             assert result.exit_code == 0
             assert "Task created:" in result.output
             assert "Status: draft" in result.output
+    
+    def test_task_create_blocks_second_in_progress(self, cli_runner):
+        """Test that creating a second in-progress task is blocked."""
+        with cli_runner.isolated_filesystem():
+            cli_runner.invoke(cli, ['init'])
+            
+            # Create first task (defaults to in-progress)
+            result1 = cli_runner.invoke(cli, ['task', 'create', '--name', 'task-1'])
+            assert result1.exit_code == 0
+            
+            # Try to create second task (should fail)
+            result2 = cli_runner.invoke(cli, ['task', 'create', '--name', 'task-2'])
+            assert result2.exit_code == 0  # CLI catches the error
+            assert "already in-progress" in result2.output
 
 
 class TestEpicCommands:

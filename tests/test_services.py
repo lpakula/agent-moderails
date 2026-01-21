@@ -133,18 +133,28 @@ class TestTaskService:
         task = task_service.create("test-task", epic.id)
         
         assert task.name == "test-task"
-        assert task.file_name.startswith("tasks/test-epic/test-task-")
-        assert task.status == TaskStatus.DRAFT
+        assert task.file_name == ""  # File not created until #plan mode
+        assert task.status == TaskStatus.IN_PROGRESS  # Default is now in-progress
     
-    def test_create_task_creates_file(self, test_db, temp_dir):
-        """Test that creating task creates the file."""
+    def test_create_plan_file(self, test_db, temp_dir):
+        """Test that create_plan_file creates the task file."""
         epic_service = EpicService(test_db)
         epic = epic_service.create("test-epic")
         
         task_service = TaskService(test_db, temp_dir)
         task = task_service.create("test-task", epic.id)
         
-        task_file = temp_dir / task.file_name
+        # File doesn't exist initially
+        assert task.file_name == ""
+        
+        # Create plan file (simulating entering #plan mode)
+        file_path = task_service.create_plan_file(task.id)
+        
+        assert file_path is not None
+        assert file_path.startswith("tasks/test-epic/test-task-")
+        
+        # File should now exist
+        task_file = temp_dir / file_path
         assert task_file.exists()
     
     def test_get_task(self, test_db, temp_dir):
@@ -180,8 +190,9 @@ class TestTaskService:
         epic2 = epic_service.create("epic2")
         
         task_service = TaskService(test_db, temp_dir)
-        task_service.create("task1", epic1.id)
-        task_service.create("task2", epic2.id)
+        # Use draft status for multiple tasks since only one can be in-progress
+        task_service.create("task1", epic1.id, status=TaskStatus.DRAFT)
+        task_service.create("task2", epic2.id, status=TaskStatus.DRAFT)
         
         tasks = task_service.list_all()
         
@@ -194,8 +205,9 @@ class TestTaskService:
         epic2 = epic_service.create("epic2")
         
         task_service = TaskService(test_db, temp_dir)
-        task_service.create("task1", epic1.id)
-        task_service.create("task2", epic2.id)
+        # Use draft status for multiple tasks since only one can be in-progress
+        task_service.create("task1", epic1.id, status=TaskStatus.DRAFT)
+        task_service.create("task2", epic2.id, status=TaskStatus.DRAFT)
         
         tasks = task_service.list_all(epic_name="epic1")
         
@@ -208,16 +220,15 @@ class TestTaskService:
         epic = epic_service.create("test-epic")
         
         task_service = TaskService(test_db, temp_dir)
-        task = task_service.create("test-task", epic.id)
+        task = task_service.create("test-task", epic.id)  # Already in-progress
         
         updated = task_service.update(
             task.id,
-            status=TaskStatus.IN_PROGRESS,
             summary="New summary"
         )
         
         assert updated is not None
-        assert updated.status == TaskStatus.IN_PROGRESS
+        assert updated.status == TaskStatus.IN_PROGRESS  # Still in-progress
         assert updated.summary == "New summary"
     
     def test_delete_task(self, test_db, temp_dir):
@@ -226,7 +237,7 @@ class TestTaskService:
         epic = epic_service.create("test-epic")
         
         task_service = TaskService(test_db, temp_dir)
-        task = task_service.create("to-delete", epic.id)
+        task = task_service.create("to-delete", epic.id, status=TaskStatus.DRAFT)
         
         result = task_service.delete(task.id)
         
@@ -240,6 +251,9 @@ class TestTaskService:
         
         task_service = TaskService(test_db, temp_dir)
         task = task_service.create("test-task", epic.id)
+        
+        # Create the plan file (simulating entering #plan mode)
+        task_service.create_plan_file(task.id)
         
         content = task_service.get_task_content(task.id)
         
@@ -255,8 +269,9 @@ class TestTaskService:
         epic = epic_service.create("test-epic")
         
         task_service = TaskService(test_db, temp_dir)
-        task1 = task_service.create("task-1", epic.id)
-        task2 = task_service.create("task-2", epic.id)
+        # Create tasks as draft first
+        task1 = task_service.create("task-1", epic.id, status=TaskStatus.DRAFT)
+        task2 = task_service.create("task-2", epic.id, status=TaskStatus.DRAFT)
         
         # Set first task to in-progress
         task_service.update(task1.id, status=TaskStatus.IN_PROGRESS)
@@ -274,10 +289,7 @@ class TestTaskService:
         epic = epic_service.create("test-epic")
         
         task_service = TaskService(test_db, temp_dir)
-        task = task_service.create("task-1", epic.id)
-        
-        # Set to in-progress
-        task_service.update(task.id, status=TaskStatus.IN_PROGRESS)
+        task = task_service.create("task-1", epic.id)  # Defaults to in-progress
         
         # Update the same task again (e.g., adding summary) - should work
         updated = task_service.update(task.id, status=TaskStatus.IN_PROGRESS, summary="New summary")
@@ -291,16 +303,14 @@ class TestTaskService:
         epic = epic_service.create("test-epic")
         
         task_service = TaskService(test_db, temp_dir)
-        task1 = task_service.create("task-1", epic.id)
-        task2 = task_service.create("task-2", epic.id)
+        task1 = task_service.create("task-1", epic.id)  # Defaults to in-progress
         
-        # Set first task to in-progress, then complete it
-        task_service.update(task1.id, status=TaskStatus.IN_PROGRESS)
+        # Complete first task
         task_service.update(task1.id, status=TaskStatus.COMPLETED)
         
-        # Now second task can be in-progress
-        updated = task_service.update(task2.id, status=TaskStatus.IN_PROGRESS)
+        # Now second task can be created (defaults to in-progress)
+        task2 = task_service.create("task-2", epic.id)
         
-        assert updated is not None
-        assert updated.status == TaskStatus.IN_PROGRESS
+        assert task2 is not None
+        assert task2.status == TaskStatus.IN_PROGRESS
 

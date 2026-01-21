@@ -198,11 +198,10 @@ def task(ctx):
 @click.option("--name", "-n", required=True, help="Task name")
 @click.option("--epic", "-e", help="Epic ID (6-character, optional)")
 @click.option("--type", "-t", type=click.Choice(["feature", "fix", "refactor", "chore"]), default="feature", help="Task type (default: feature)")
-@click.option("--status", "-s", type=click.Choice(["draft", "in-progress"]), default="draft", help="Initial task status (default: draft)")
-@click.option("--no-file", is_flag=True, help="Skip task file creation")
+@click.option("--status", "-s", type=click.Choice(["draft", "in-progress"]), default="in-progress", help="Initial task status (default: in-progress)")
 @click.pass_context
-def task_create(ctx, name: str, epic: Optional[str], type: str, status: str, no_file: bool):
-    """Create a new task."""
+def task_create(ctx, name: str, epic: Optional[str], type: str, status: str):
+    """Create a new task. Plan file is created when entering #plan mode."""
     services = get_services_or_exit(ctx)
     
     # Validate epic first if provided
@@ -221,7 +220,6 @@ def task_create(ctx, name: str, epic: Optional[str], type: str, status: str, no_
             epic_id=epic if epic else None, 
             task_type=task_type, 
             status=task_status,
-            create_file=not no_file
         )
         
         click.echo(f"✅ Task created: {task.id} - {click.style(task.name, fg='green', bold=True)}")
@@ -229,8 +227,6 @@ def task_create(ctx, name: str, epic: Optional[str], type: str, status: str, no_
         if epic_obj:
             click.echo(f"   Epic: {epic_obj.id} - {epic_obj.name}")
         click.echo(f"   Status: {task.status.value}")
-        if not no_file:
-            click.echo(f"   File: {task.file_path}")
         
         return task
     except ValueError as e:

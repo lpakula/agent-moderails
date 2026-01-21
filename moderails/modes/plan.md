@@ -11,9 +11,11 @@
 - **ID**: `{{ current_task.id }}`
 - **Name**: {{ current_task.name }}
 - **File**: `{{ current_task.file_path }}`
-{% if current_task.epic %}
-- **Epic**: {{ current_task.epic.name }} (`{{ current_task.epic.id }}`)
-{% endif %}
+{% if current_task.epic %}- **Epic**: {{ current_task.epic.name }} (`{{ current_task.epic.id }}`){% endif %}
+{% else %}
+## NO ACTIVE TASK
+
+Start a task first with `moderails task create --name "Task name"` or switch to an existing task.
 {% endif %}
 
 ---
@@ -25,9 +27,9 @@ Create executable TODO plan in the task file.
 ## WORKFLOW
 
 {% if current_task %}
-1. Update each section in the task file: `{{ current_task.file_path }}`
+1. Edit the task file: `{{ current_task.file_path }}`
 {% else %}
-1. Update each section in the task file (load task first with `moderails task load --task <id>`)
+1. No active task - start one first
 {% endif %}
 
 2. Create atomic TODO LIST items

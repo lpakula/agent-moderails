@@ -4,7 +4,7 @@ import pytest
 from unittest.mock import Mock, patch
 
 from moderails.modes import get_mode
-from moderails.utils.context import build_mode_context, get_in_progress_task, get_in_progress_or_draft_task
+from moderails.utils.context import build_mode_context, get_in_progress_task, get_draft_tasks
 
 
 class TestAllModesRender:
@@ -19,6 +19,7 @@ class TestAllModesRender:
             "status": "in-progress",
             "file_name": "tasks/test-epic/test-task-abc123.plan.md",
             "file_path": ".moderails/tasks/test-epic/test-task-abc123.plan.md",
+            "has_plan_file": True,
             "type": "feature",
             "epic": {"id": "xyz789", "name": "Test Epic"},
         }
@@ -40,14 +41,14 @@ class TestAllModesRender:
         """Test start mode renders without task (new user flow)."""
         context = {
             "current_task": None,
+            "draft_tasks": [],
             "epics": [],
             "flags": [],
         }
         result = get_mode("start", context)
         
         assert "# Moderails Protocol" in result
-        assert "No active tasks" in result
-        assert "No epics" in result
+        assert "No Tasks" in result
     
     def test_start_mode_renders_with_epics(self):
         """Test start mode renders with existing epics."""
@@ -101,7 +102,7 @@ class TestAllModesRender:
         result = get_mode("brainstorm", context)
         
         assert "# BRAINSTORM MODE" in result
-        assert "abc123" in result
+        assert "WORKFLOW" in result
     
     def test_plan_mode_renders(self, task_context):
         """Test plan mode renders."""
@@ -276,11 +277,11 @@ class TestGetMode:
     
     def test_get_mode_no_task(self):
         """Test mode renders 'no task' workflow when current_task is None."""
-        context = {"current_task": None}
+        context = {"current_task": None, "draft_tasks": [], "epics": []}
         
         result = get_mode("start", context)
         
-        assert "No active tasks" in result
+        assert "No Tasks" in result
         assert "What would you like to build" in result
     
     def test_get_mode_invalid_mode(self):
@@ -420,8 +421,11 @@ class TestBuildModeContext:
         mock_context_service.list_memories.return_value = ["auth", "payments"]
         mock_context_service.get_files_tree.return_value = "src/\n  file.ts"
         
+        mock_task_service = Mock()
+        mock_task_service.list_all.return_value = []  # No in-progress task
+        
         services = {
-            "task": Mock(),
+            "task": mock_task_service,
             "context": mock_context_service,
             "epic": Mock(),
         }

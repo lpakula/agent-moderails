@@ -24,23 +24,34 @@ class TaskService:
         epic_id: Optional[str] = None,
         summary: str = "",
         task_type: TaskType = TaskType.FEATURE,
-        status: TaskStatus = TaskStatus.DRAFT,
-        create_file: bool = True,
+        status: TaskStatus = TaskStatus.IN_PROGRESS,
     ) -> Task:
         """Create a new task. Epic is optional (provide epic ID). Both task and epic names can contain spaces.
+        
+        Plan file is NOT created here - it's created when entering #plan mode.
         
         Args:
             name: Task name (max 50 characters)
             epic_id: Optional epic ID
             summary: Task summary
             task_type: Task type (feature, fix, refactor, chore)
-            status: Initial task status
-            create_file: Whether to create the task plan file (default: True)
+            status: Initial task status (default: in-progress)
         """
         
         # Validate task name length
         if len(name) > 50:
             raise ValueError(f"Task name must be 50 characters or less (got {len(name)})")
+        
+        # Enforce single in-progress task when creating as in-progress
+        if status == TaskStatus.IN_PROGRESS:
+            existing = self.session.query(Task).filter(
+                Task.status == TaskStatus.IN_PROGRESS
+            ).first()
+            if existing:
+                raise ValueError(
+                    f"Task '{existing.id}' ({existing.name}) is already in-progress. "
+                    f"Complete or abort it first."
+                )
         
         # Validate epic if provided
         epic = None
@@ -49,46 +60,59 @@ class TaskService:
             if not epic:
                 raise ValueError(f"Epic with ID '{epic_id}' not found")
         
-        # Create task first to get the generated id
+        # Create task - file_name stays empty until plan mode
         task = Task(
             name=name,
-            file_name="",  
+            file_name="",  # Will be set when entering #plan mode
             summary=summary,
             type=task_type,
             epic_id=epic_id,
             status=status,
         )
         self.session.add(task)
-        self.session.flush()  # Get id without committing
+        self.session.commit()
+        self.session.refresh(task)
+        return task
+    
+    def create_plan_file(self, task_id: str) -> Optional[str]:
+        """Create plan file for a task. Called when entering #plan mode.
         
-        # Use sanitized name and id for file naming
-        # Create epic subfolder if task belongs to an epic
-        sanitized_name = self._sanitize_name(name)
+        Returns:
+            File path if created, None if task not found
+        """
+        task = self.get(task_id)
+        if not task:
+            return None
+        
+        # If file already exists, just return the path
+        if task.file_name:
+            return task.file_name
+        
+        # Generate file path
+        sanitized_name = self._sanitize_name(task.name)
         filename_base = f"{sanitized_name}-{task.id}.plan.md"
         
-        if epic:
-            # Create epic-named subfolder: tasks/{epic_name}/
-            epic_folder = self._sanitize_name(epic.name)
+        if task.epic:
+            epic_folder = self._sanitize_name(task.epic.name)
             tasks_dir = self.moderails_dir / "tasks" / epic_folder
             file_name = f"tasks/{epic_folder}/{filename_base}"
         else:
             tasks_dir = self.moderails_dir / "tasks"
             file_name = f"tasks/{filename_base}"
         
+        # Create directory and file
+        tasks_dir.mkdir(parents=True, exist_ok=True)
+        task_file = tasks_dir / filename_base
+        
+        template = get_task_template()
+        content = template.format(name=task.name, summary=task.summary or "[task purpose]")
+        task_file.write_text(content)
+        
+        # Update task with file path
         task.file_name = file_name
-        
-        # Only create file if requested
-        if create_file:
-            tasks_dir.mkdir(parents=True, exist_ok=True)
-            task_file = tasks_dir / filename_base
-            
-            template = get_task_template()
-            content = template.format(name=name, summary=summary or "[task purpose]")
-            task_file.write_text(content)
-        
         self.session.commit()
-        self.session.refresh(task)
-        return task
+        
+        return file_name
     
     def get(self, task_id: str) -> Optional[Task]:
         """Get task by 6-character task ID."""
@@ -159,11 +183,11 @@ class TaskService:
         if not task:
             return False
         
-        # Find and delete task file directly in .moderails/
-        task_file = self.moderails_dir / task.file_name
-        
-        if task_file.exists():
-            task_file.unlink()
+        # Delete task file if it exists
+        if task.file_name:
+            task_file = self.moderails_dir / task.file_name
+            if task_file.exists():
+                task_file.unlink()
         
         self.session.delete(task)
         self.session.commit()
