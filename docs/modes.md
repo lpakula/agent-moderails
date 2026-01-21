@@ -6,13 +6,6 @@ Modes define clear boundaries — no skipping ahead, no mixing phases.
 🔍 Research → 📋 Plan → 🔨 Execute → ✅ Complete
 ```
 
-## 🏁 Start
-
-```
-/moderails
-```
-
-The protocol initialisation. 
 
 The agent asks you to describe what you want to build before exploring your codebase.
 
@@ -50,13 +43,14 @@ The agent breaks down the work into atomic TODO items in the task file. Review a
 
 Implement TODO items one by one. Mark each item complete `[x]` in the task file.
 
-### Flags
 
 | Flag | Effect |
 |------|--------|
 | `--no-confirmation` | Batch mode - work through all TODOs without stopping |
 
-**Adjusting the plan:** No plan is perfect. You can adjust the approach along the way — add items, modify steps, or change direction. All changes are recorded in the task file, which remains the single source of truth throughout execution.
+
+>[!TIP]
+> **Adjusting the plan:** No plan is perfect. You can adjust the approach along the way — add items, modify steps, or change direction. All changes are recorded in the task file, which remains the single source of truth throughout execution.
 
 ## ✅ Complete
 
@@ -88,3 +82,12 @@ Best for small tasks, bug fixes, and quick iterations where you want memory bene
 
 Abandon task at any point. Permanently deletes the task and resets all git changes.
 
+## Mode Flags
+
+Some modes support optional flags that modify their behavior. Use the syntax:
+
+```
+#mode --flag-name
+```
+
+For example, `#execute --no-confirmation` enables batch mode. See individual mode sections for available flags.
