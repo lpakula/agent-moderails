@@ -532,24 +532,29 @@ def epic_list(ctx):
 
 # ============== MODE ==============
 
-@cli.command("mode")
+@cli.command("mode", context_settings={"ignore_unknown_options": True, "allow_extra_args": True})
 @click.option("--name", "-n", required=True, help="Mode name")
-@click.option("--flag", "-f", multiple=True, help="Mode flags (e.g., --flag no-confirmation)")
 @click.pass_context
-def mode(ctx, name: str, flag: tuple):
-    """Get mode definition with dynamic context. Use when switching modes (e.g., #execute --flag no-confirmation)."""
+def mode(ctx, name: str):
+    """Get mode definition with dynamic context. Use when switching modes (e.g., #execute --no-confirmation)."""
     valid_modes = ["fast", "research", "brainstorm", "plan", "execute", "complete", "abort"]
     if name not in valid_modes:
         click.echo(f"❌ Invalid mode. Valid modes: {', '.join(valid_modes)}")
         return
     
+    # Parse unknown options as flags (e.g., --no-confirmation → no-confirmation)
+    flags = []
+    for arg in ctx.args:
+        if arg.startswith("--"):
+            flags.append(arg[2:])  # Strip leading --
+    
     # Build dynamic context for template rendering
     try:
         services = get_services(ctx.obj.get("db_path"))
-        mode_context = build_mode_context(services, name, flags=list(flag))
+        mode_context = build_mode_context(services, name, flags=flags)
     except FileNotFoundError:
         # No database - render without context (but still pass flags)
-        mode_context = {"flags": list(flag)}
+        mode_context = {"flags": flags}
     
     click.echo(get_mode(name, mode_context))
 

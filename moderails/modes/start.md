@@ -40,15 +40,12 @@ moderails mode --name <mode>
 
 ## MODE SWITCHING
 
-When user types `#execute`, run:
+When user types `#<mode> [--flags]`, run:
 ```sh
-moderails mode --name execute
+moderails mode --name <mode> [--flags]
 ```
 
-**With flags** (e.g., `#execute --flag-1`):
-```sh
-moderails mode --name execute --flag flag-1
-```
+Example: `#execute --no-confirmation` → `moderails mode --name execute --no-confirmation`
 
 ## CRITICAL RULES
 
