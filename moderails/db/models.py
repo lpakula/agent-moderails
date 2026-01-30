@@ -66,7 +66,7 @@ class Task(Base):
     @property
     def file_path(self) -> str:
         """Get relative path to task file."""
-        return f".moderails/{self.file_name}"
+        return f"_moderails/{self.file_name}"
     
     def to_dict(self) -> dict:
         return {

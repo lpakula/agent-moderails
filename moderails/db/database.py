@@ -35,7 +35,7 @@ def find_db_path(start_path: Optional[Path] = None) -> Optional[Path]:
 
 def init_db(private: bool = False) -> Path:
     """
-    Initialize a new database and configuration in .moderails directory.
+    Initialize a new database and configuration in _moderails directory.
     
     Args:
         private: If True, all moderails files are gitignored and not committed.

@@ -15,9 +15,9 @@ class TestFindConfigPath:
     """Tests for find_config_path function."""
     
     def test_find_config_in_subdirectory(self, temp_dir):
-        """Test finding config.json in .moderails directory."""
+        """Test finding config.json in _moderails directory."""
         # Create config file
-        config_dir = temp_dir / ".moderails"
+        config_dir = temp_dir / "_moderails"
         config_dir.mkdir(parents=True)
         config_file = config_dir / "config.json"
         config_file.write_text('{"version": "1.0"}')
@@ -37,7 +37,7 @@ class TestLoadConfig:
     
     def test_load_existing_config(self, temp_dir):
         """Test loading an existing config file."""
-        config_dir = temp_dir / ".moderails"
+        config_dir = temp_dir / "_moderails"
         config_dir.mkdir(parents=True)
         config_file = config_dir / "config.json"
         
@@ -57,14 +57,14 @@ class TestSaveConfig:
     """Tests for save_config function."""
     
     def test_save_config_creates_directory(self, temp_dir, monkeypatch):
-        """Test that save_config creates the .moderails directory."""
+        """Test that save_config creates the _moderails directory."""
         monkeypatch.chdir(temp_dir)
         
         config = {"version": "1.0"}
         config_path = save_config(config)
         
         assert config_path.exists()
-        assert config_path.parent.name == ".moderails"
+        assert config_path.parent.name == "_moderails"
     
     def test_save_config_writes_correct_content(self, temp_dir, monkeypatch):
         """Test that save_config writes the correct JSON content."""
@@ -82,7 +82,7 @@ class TestGetDbPath:
     
     def test_get_db_path(self, temp_dir):
         """Test getting database path."""
-        config_dir = temp_dir / ".moderails"
+        config_dir = temp_dir / "_moderails"
         config_dir.mkdir(parents=True)
         config_file = config_dir / "config.json"
         config_file.write_text('{"version": "1.0"}')

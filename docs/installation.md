@@ -36,7 +36,7 @@ For projects where you don't want to commit any moderails files:
 moderails init --private
 ```
 
-This ignores all `.moderails/` files in git. Task history remains local and won't be committed.
+This ignores all `_moderails/` files in git. Task history remains local and won't be committed.
 
 ---
 
@@ -46,7 +46,7 @@ This creates the following structure:
 my-project/
 ├── .cursor/commands/moderails.md ✨
 ├── .claude/commands/moderails.md ✨
-└── .moderails/
+└── _moderails/
     ├── config.json ⚙️
     ├── moderails.db 💾
     ├── history.jsonl 📜

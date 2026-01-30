@@ -27,8 +27,8 @@ class TestInitCommand:
             assert "agent will guide you" in result.output
             
             # Check files were created
-            assert (Path.cwd() / ".moderails" / "moderails.db").exists()
-            assert (Path.cwd() / ".moderails" / "config.json").exists()
+            assert (Path.cwd() / "_moderails" / "moderails.db").exists()
+            assert (Path.cwd() / "_moderails" / "config.json").exists()
 
 
 class TestStartCommand:
@@ -210,7 +210,7 @@ class TestTaskCommands:
             
             # Verify task file was NOT created (created in #plan mode instead)
             task_id = result.output.split("Task created: ")[1].split(" -")[0].strip()
-            tasks_dir = Path.cwd() / ".moderails" / "tasks"
+            tasks_dir = Path.cwd() / "_moderails" / "tasks"
             task_files = list(tasks_dir.glob(f"*{task_id}*.md")) if tasks_dir.exists() else []
             assert len(task_files) == 0
     
@@ -315,7 +315,7 @@ class TestMigrateCommand:
             cli_runner.invoke(cli, ['init'])
             
             # Downgrade schema version to simulate old database
-            db_path = Path.cwd() / ".moderails" / "moderails.db"
+            db_path = Path.cwd() / "_moderails" / "moderails.db"
             old_version = CURRENT_VERSION - 1 if CURRENT_VERSION > 1 else 0
             set_schema_version(db_path, old_version)
             

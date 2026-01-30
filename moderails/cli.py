@@ -113,7 +113,7 @@ def init(ctx, private: bool):
             click.echo()
             click.echo(click.style("✓ ModeRails initialized successfully!", fg="green", bold=True))
             if private:
-                click.echo(click.style("  🔒 Private mode: all .moderails files are gitignored", fg="yellow"))
+                click.echo(click.style("  🔒 Private mode: all _moderails files are gitignored", fg="yellow"))
             click.echo()
             click.echo(f"  Database:  {click.style(str(rel_db_path), fg='cyan')}")
             for cmd in rel_commands:
@@ -447,7 +447,7 @@ def task_load(ctx, task_id: str):
     click.echo(f"**Status**: {task.status.value}")
     if task.epic:
         click.echo(f"**Epic**: {task.epic.name} ({task.epic_id})")
-    click.echo(f"**File**: .moderails/{task.file_name}")
+    click.echo(f"**File**: _moderails/{task.file_name}")
     if task.summary:
         click.echo(f"**Summary**: {task.summary}")
     click.echo()

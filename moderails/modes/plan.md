@@ -74,7 +74,7 @@ moderails task create --name "2-create-models" --epic {{ current_task.epic.id if
 moderails task create --name "3-add-api-endpoints" --epic {{ current_task.epic.id if current_task and current_task.epic else '<epic-id>' }} --status draft
 ```
    Use numbered prefixes (1-, 2-, 3-) to maintain order.
-   Task files are stored in `.moderails/tasks/{epic-name}/{task-name}-{id}.plan.md`.
+   Task files are stored in `_moderails/tasks/{epic-name}/{task-name}-{id}.plan.md`.
 
 3. **Update each task file** with its specific plan:
    - Each task should have 3-7 TODO items max

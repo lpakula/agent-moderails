@@ -3,10 +3,10 @@
 ## Initialization
 
 ```bash
-# Initialize in current directory (creates .moderails/)
+# Initialize in current directory (creates _moderails/)
 moderails init
 
-# Initialize in private mode (all .moderails files gitignored)
+# Initialize in private mode (all _moderails files gitignored)
 moderails init --private
 ```
 

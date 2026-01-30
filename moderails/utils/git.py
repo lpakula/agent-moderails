@@ -28,7 +28,7 @@ def is_git_repo(cwd: str = ".") -> bool:
 
 # Patterns to exclude from files_changed in history
 EXCLUDED_PATTERNS = [
-    ".moderails/",
+    "_moderails/",
     "poetry.lock",
     "package-lock.json",
     "yarn.lock",

@@ -12,7 +12,7 @@ The agent already knows how to use skills (read the SKILL.md when relevant). Mod
 
 ## Mandatory Context
 
-Files in `.moderails/context/mandatory/` contain essential project knowledge.
+Files in `_moderails/context/mandatory/` contain essential project knowledge.
 
 **Use this for:**
 - Project-specific conventions
@@ -26,7 +26,7 @@ Automatically injected when entering `#research` or `#fast` modes. No manual loa
 
 ## Memories Context
 
-Files in `.moderails/context/memories/` are named context documents that the agent can discover and load.
+Files in `_moderails/context/memories/` are named context documents that the agent can discover and load.
 
 **Use this for:**
 - Feature documentation (auth.md, payments.md, etc.)

@@ -198,7 +198,7 @@ class TaskService:
         if not task:
             return None
         
-        # Task file is directly in .moderails/
+        # Task file is directly in _moderails/
         task_file = self.moderails_dir / task.file_name
         
         return task_file.read_text() if task_file.exists() else None

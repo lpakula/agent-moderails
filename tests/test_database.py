@@ -17,7 +17,7 @@ class TestInitDb:
         
         assert db_path.exists()
         assert db_path.name == "moderails.db"
-        assert db_path.parent.name == ".moderails"
+        assert db_path.parent.name == "_moderails"
     
     def test_init_db_creates_config(self, temp_dir, monkeypatch):
         """Test that init_db creates config.json."""
@@ -156,7 +156,7 @@ class TestTaskModel:
         test_db.add(task)
         test_db.commit()
         
-        assert task.file_path == ".moderails/tasks/task.md"
+        assert task.file_path == "_moderails/tasks/task.md"
     
     def test_task_status_enum(self, test_db):
         """Test TaskStatus enum values."""

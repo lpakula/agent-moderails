@@ -53,7 +53,7 @@ moderails mode --name execute --flag flag-1
 ## CRITICAL RULES
 
 - **MUST** start every response with `[MODE: NAME]`
-- **MUST** Use task files in `.moderails/tasks`
+- **MUST** Use task files in `_moderails/tasks`
 - **FORBIDDEN**: Switching modes without explicit user command (e.g., `#execute`)
 - **FORBIDDEN**: `todo_write` or any other internal TODO tools
 

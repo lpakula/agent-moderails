@@ -7,7 +7,7 @@ from typing import Optional
 from . import __version__
 
 
-MODERAILS_DIR = ".moderails"
+MODERAILS_DIR = "_moderails"
 CONFIG_FILENAME = "config.json"
 
 
@@ -33,7 +33,7 @@ def find_config_path(start_path: Optional[Path] = None) -> Optional[Path]:
     
     # Walk up the directory tree
     while current != current.parent:
-        # Check for config in .moderails/config.json
+        # Check for config in _moderails/config.json
         config_path = current / MODERAILS_DIR / CONFIG_FILENAME
         if config_path.exists():
             return config_path
@@ -68,7 +68,7 @@ def load_config(config_path: Optional[Path] = None) -> dict:
 
 def save_config(config: dict) -> Path:
     """
-    Save configuration to config.json in .moderails directory.
+    Save configuration to config.json in _moderails directory.
     
     Args:
         config: Configuration dictionary
@@ -88,13 +88,13 @@ def save_config(config: dict) -> Path:
 
 def get_moderails_dir(config_path: Optional[Path] = None) -> Path:
     """
-    Get the .moderails directory path.
+    Get the _moderails directory path.
     
     Args:
         config_path: Explicit path to config.json (auto-discovers if None)
         
     Returns:
-        Path to .moderails directory
+        Path to _moderails directory
     """
     # If config exists, use its parent directory
     if config_path is None:
@@ -125,7 +125,7 @@ def is_private_mode(config_path: Optional[Path] = None) -> bool:
     """
     Check if moderails is running in private mode.
     
-    In private mode, all .moderails files are gitignored and
+    In private mode, all _moderails files are gitignored and
     history.jsonl is not committed.
     
     Args:

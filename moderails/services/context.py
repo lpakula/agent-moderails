@@ -12,7 +12,7 @@ class ContextService:
         self.mandatory_dir = self.context_dir / "mandatory"
         self.memories_dir = self.context_dir / "memories"
         self.history_file = moderails_dir / "history.jsonl"
-        # Skills directory is at project root (parent of .moderails)
+        # Skills directory is at project root (parent of _moderails)
         self.skills_dir = moderails_dir.parent / "skills"
     
     def load_mandatory_context(self) -> Optional[str]:

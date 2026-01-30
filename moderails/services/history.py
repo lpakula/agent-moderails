@@ -109,7 +109,7 @@ class HistoryService:
                     except json.JSONDecodeError:
                         continue
         
-        # Get staged files (excludes .moderails/, lock files, etc.)
+        # Get staged files (excludes _moderails/, lock files, etc.)
         files_changed = get_staged_files()
         
         # Prepare task data (git_hash and epic_id stored only in local DB, not in shared history.jsonl)

@@ -35,7 +35,7 @@ def _task_to_dict(task: Task) -> dict:
         "name": task.name,
         "status": task.status.value,
         "file_name": task.file_name,
-        "file_path": f".moderails/{task.file_name}" if task.file_name else None,
+        "file_path": f"_moderails/{task.file_name}" if task.file_name else None,
         "has_plan_file": has_plan_file,
         "type": task.type.value,
         "epic": {
