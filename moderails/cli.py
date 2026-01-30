@@ -20,7 +20,7 @@ from .utils import (
     create_command_files,
     format_task_line,
 )
-from .utils.git import get_staged_files
+from .utils.git import get_staged_files, is_git_repo
 
 
 def get_moderails_dir(db_path: Optional[Path] = None) -> Path:
@@ -285,28 +285,33 @@ def task_delete(ctx, task_id: str, confirm: bool):
 @task.command("complete")
 @click.option("--task", "-t", "task_id", required=True, help="Task ID (6-character)")
 @click.option("--summary", "-s", help="Task summary")
-@click.option("--commit-message", "-m", required=True, help="Git commit message")
+@click.option("--commit-message", "-m", help="Git commit message")
 @click.pass_context
-def task_complete(ctx, task_id: str, summary: Optional[str], commit_message: str):
-    """Mark task as completed and commit changes.
+def task_complete(ctx, task_id: str, summary: Optional[str], commit_message: Optional[str]):
+    """Mark task as completed and optionally commit changes.
     
-    Stages history.jsonl, commits with provided message, and updates task with git hash.
-    If any git step fails, returns fallback instructions for manual completion.
-    In private mode, history.jsonl is not staged (it's gitignored).
+    In git repos: stages history.jsonl, commits with provided message, and updates task with git hash.
+    In non-git projects: marks task complete and exports to history.
     """
     services = get_services_or_exit(ctx)
     moderails_dir = get_moderails_dir(ctx.obj.get("db_path"))
     history_path = moderails_dir / "history.jsonl"
     private_mode = is_private_mode()
+    use_git = is_git_repo()
     
-    # Check for staged files (required for files_changed in history)
-    staged_files = get_staged_files()
-    if not staged_files:
-        click.echo("❌ No staged files found.")
-        click.echo("\n💡 Stage your changes first:")
-        click.echo("   git add <file1> <file2> ...")
-        click.echo("\nThen run this command again.")
-        return
+    if use_git:
+        # Git workflow: require staged files and commit message
+        staged_files = get_staged_files()
+        if not staged_files:
+            click.echo("❌ No staged files found.")
+            click.echo("\n💡 Stage your changes first:")
+            click.echo("   git add <file1> <file2> ...")
+            click.echo("\nThen run this command again.")
+            return
+        
+        if not commit_message:
+            click.echo("❌ --commit-message is required.")
+            return
     
     try:
         # Update summary if provided
@@ -321,70 +326,70 @@ def task_complete(ctx, task_id: str, summary: Optional[str], commit_message: str
         services["history"].export_task(task_id)
         click.echo("✅ Exported to history.jsonl")
         
-        # === Automated Git Workflow ===
-        
-        # Step 1: Stage history.jsonl (skip in private mode - it's gitignored)
-        if not private_mode:
-            time.sleep(0.2)  # Let file watchers settle
-            stage_result = subprocess.run(
-                ["git", "add", str(history_path)],
+        # Git workflow: commit and update hash
+        if use_git:
+            # Step 1: Stage history.jsonl (skip in private mode - it's gitignored)
+            if not private_mode:
+                time.sleep(0.2)  # Let file watchers settle
+                stage_result = subprocess.run(
+                    ["git", "add", str(history_path)],
+                    check=False,
+                    capture_output=True,
+                    text=True
+                )
+                if stage_result.returncode != 0:
+                    click.echo("⚠️  Failed to stage history.jsonl")
+                    click.echo("\n## FALLBACK: Complete git workflow manually")
+                    click.echo("```bash")
+                    click.echo(f"git add {history_path}")
+                    click.echo(f"git commit -m \"{commit_message}\"")
+                    click.echo(f"moderails task update --task {task_id} --git-hash $(git rev-parse HEAD)")
+                    click.echo("```")
+                    if stage_result.stderr:
+                        click.echo(f"\nGit error: {stage_result.stderr.strip()}")
+                    return
+                
+                click.echo("✅ Staged history.jsonl")
+            
+            # Step 2: Commit
+            commit_result = subprocess.run(
+                ["git", "commit", "-m", commit_message],
                 check=False,
                 capture_output=True,
                 text=True
             )
-            if stage_result.returncode != 0:
-                click.echo("⚠️  Failed to stage history.jsonl")
+            if commit_result.returncode != 0:
+                click.echo("⚠️  Commit failed")
                 click.echo("\n## FALLBACK: Complete git workflow manually")
                 click.echo("```bash")
-                click.echo(f"git add {history_path}")
                 click.echo(f"git commit -m \"{commit_message}\"")
                 click.echo(f"moderails task update --task {task_id} --git-hash $(git rev-parse HEAD)")
                 click.echo("```")
-                if stage_result.stderr:
-                    click.echo(f"\nGit error: {stage_result.stderr.strip()}")
+                if commit_result.stderr:
+                    click.echo(f"\nGit error: {commit_result.stderr.strip()}")
                 return
             
-            click.echo("✅ Staged history.jsonl")
-        
-        # Step 2: Commit
-        commit_result = subprocess.run(
-            ["git", "commit", "-m", commit_message],
-            check=False,
-            capture_output=True,
-            text=True
-        )
-        if commit_result.returncode != 0:
-            click.echo("⚠️  Commit failed")
-            click.echo("\n## FALLBACK: Complete git workflow manually")
-            click.echo("```bash")
-            click.echo(f"git commit -m \"{commit_message}\"")
-            click.echo(f"moderails task update --task {task_id} --git-hash $(git rev-parse HEAD)")
-            click.echo("```")
-            if commit_result.stderr:
-                click.echo(f"\nGit error: {commit_result.stderr.strip()}")
-            return
-        
-        click.echo(f"✅ Committed: {commit_message}")
-        
-        # Step 3: Get git hash and update task
-        hash_result = subprocess.run(
-            ["git", "rev-parse", "HEAD"],
-            check=False,
-            capture_output=True,
-            text=True
-        )
-        if hash_result.returncode != 0:
-            click.echo("⚠️  Could not get git hash")
-            click.echo("\n## FALLBACK: Update task with git hash manually")
-            click.echo("```bash")
-            click.echo(f"moderails task update --task {task_id} --git-hash $(git rev-parse HEAD)")
-            click.echo("```")
-            return
-        
-        git_hash = hash_result.stdout.strip()
-        services["task"].update(task_id, git_hash=git_hash)
-        click.echo(f"✅ Updated task with git hash: {git_hash[:7]}")
-        click.echo(f"\n🎉 Task {task_id} fully completed and committed!")
+            click.echo(f"✅ Committed: {commit_message}")
+            
+            # Step 3: Get git hash and update task
+            hash_result = subprocess.run(
+                ["git", "rev-parse", "HEAD"],
+                check=False,
+                capture_output=True,
+                text=True
+            )
+            if hash_result.returncode != 0:
+                click.echo("⚠️  Could not get git hash")
+                click.echo("\n## FALLBACK: Update task with git hash manually")
+                click.echo("```bash")
+                click.echo(f"moderails task update --task {task_id} --git-hash $(git rev-parse HEAD)")
+                click.echo("```")
+                return
+            
+            git_hash = hash_result.stdout.strip()
+            services["task"].update(task_id, git_hash=git_hash)
+            click.echo(f"✅ Updated task with git hash: {git_hash[:7]}")
+            click.echo(f"\n🎉 Task {task_id} fully completed and committed!")
         
     except ValueError as e:
         click.echo(f"❌ {e}")

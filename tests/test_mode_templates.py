@@ -154,6 +154,7 @@ class TestAllModesRender:
         context = {
             "current_task": task_context,
             "git": {
+                "is_repo": True,
                 "branch": "feature/test",
                 "is_main": False,
                 "staged_files": ["src/main.ts", "src/utils.ts"],
@@ -173,6 +174,7 @@ class TestAllModesRender:
         context = {
             "current_task": task_context,
             "git": {
+                "is_repo": True,
                 "branch": "main",
                 "is_main": True,
                 "staged_files": [],
@@ -190,6 +192,7 @@ class TestAllModesRender:
         context = {
             "current_task": task_context,
             "git": {
+                "is_repo": True,
                 "branch": "feature/test",
                 "is_main": False,
                 "staged_files": [],
@@ -349,6 +352,7 @@ class TestCompleteMode:
                 "epic": None,
             },
             "git": {
+                "is_repo": True,
                 "branch": "feature/test",
                 "is_main": False,
                 "staged_files": ["src/foo.ts", "src/bar.ts"],
@@ -369,6 +373,7 @@ class TestCompleteMode:
         context = {
             "current_task": None,
             "git": {
+                "is_repo": True,
                 "branch": "main",
                 "is_main": True,
                 "staged_files": [],
@@ -436,11 +441,15 @@ class TestBuildModeContext:
         assert context["memories"] == ["auth", "payments"]
         assert "src/" in context["files_tree"]
     
+    @patch('moderails.utils.context.is_private_mode')
+    @patch('moderails.utils.context.is_git_repo')
     @patch('moderails.utils.context.get_current_branch')
     @patch('moderails.utils.context.get_staged_files')
     @patch('moderails.utils.context.get_unstaged_files')
-    def test_build_context_complete_mode(self, mock_unstaged, mock_staged, mock_branch):
+    def test_build_context_complete_mode(self, mock_unstaged, mock_staged, mock_branch, mock_is_git_repo, mock_is_private):
         """Test complete mode gets git state."""
+        mock_is_private.return_value = False
+        mock_is_git_repo.return_value = True
         mock_branch.return_value = "main"
         mock_staged.return_value = ["file1.ts"]
         mock_unstaged.return_value = ["file2.ts"]
@@ -464,6 +473,7 @@ class TestBuildModeContext:
         
         context = build_mode_context(services, "complete")
         
+        assert context["git"]["is_repo"] is True
         assert context["git"]["branch"] == "main"
         assert context["git"]["is_main"] is True
         assert context["git"]["staged_files"] == ["file1.ts"]

@@ -12,6 +12,7 @@
 - **Name**: {{ current_task.name }}
 - **Type**: {{ current_task.type }}
 {% endif %}
+{% if git.is_repo %}
 
 ## GIT STATUS
 
@@ -37,14 +38,16 @@ Wait for explicit confirmation. If user declines, STOP and suggest switching to 
 {% if not git.staged_files and not git.unstaged_files %}
 No changes detected.
 {% endif %}
+{% endif %}
 
 ---
 
 ## PURPOSE
 
-Mark task as completed and commit changes.
+Mark task as completed{% if git.is_repo %} and commit changes{% endif %}.
 
 ## WORKFLOW
+{% if git.is_repo %}
 
 1. Stage changes for this task:
 ```bash
@@ -70,10 +73,17 @@ moderails task complete --task {{ current_task.id if current_task else '<task-id
 - `refactor: <description>` for refactor tasks
 
 **If any git step fails**, the command returns fallback instructions for you to complete manually.
+{% else %}
 
-## FORBIDDEN
+Complete task:
+```bash
+moderails task complete --task {{ current_task.id if current_task else '<task-id>' }} --summary "brief summary"
+```
 
-- **commit task files** (`.moderails/tasks/` is in .gitignore)
+**This command will:**
+- Mark the task as completed in the database
+- Export the task to history.jsonl
+{% endif %}
 
 ---
 **YOU MUST FOLLOW THE WORKFLOW**

@@ -40,8 +40,11 @@ moderails task create --name "Task Name" [--type feature|fix|refactor|chore] [--
 # Update task
 moderails task update --task <task-id> [--name <name>] [--status <status>] [--type <type>] [--summary <text>]
 
-# Complete task (stages history, commits, updates git hash)
+# Complete task (in git repos: stages history, commits, updates git hash)
 moderails task complete --task <task-id> --commit-message "<type>: <description>" [--summary "<text>"]
+
+# Complete task (non-git projects: marks complete and exports to history)
+moderails task complete --task <task-id> [--summary "<text>"]
 
 # Delete task
 moderails task delete --task <task-id> --confirm

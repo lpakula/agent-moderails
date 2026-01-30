@@ -1,7 +1,6 @@
 """Git utilities for generating LLM-optimized commit diffs."""
 
 import subprocess
-from pathlib import Path
 from typing import Optional
 
 
@@ -20,6 +19,11 @@ def _run_git(args: list[str], cwd: str = ".") -> Optional[str]:
         return result.stdout
     except Exception:
         return None
+
+
+def is_git_repo(cwd: str = ".") -> bool:
+    """Check if current directory is inside a git repository."""
+    return _run_git(["rev-parse", "--is-inside-work-tree"], cwd) is not None
 
 
 # Patterns to exclude from files_changed in history

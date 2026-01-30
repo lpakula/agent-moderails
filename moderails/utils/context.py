@@ -4,7 +4,7 @@ from typing import Any, Optional
 
 from ..config import is_private_mode
 from ..db.models import Task, TaskStatus
-from .git import get_current_branch, get_staged_files, get_unstaged_files
+from .git import get_current_branch, get_staged_files, get_unstaged_files, is_git_repo
 
 
 def get_in_progress_task(services: dict) -> Optional[dict]:
@@ -88,12 +88,14 @@ def build_mode_context(
     
     # Git state and private mode - only complete mode needs this
     if mode_name == "complete":
-        branch = get_current_branch()
+        in_git_repo = is_git_repo()
+        branch = get_current_branch() if in_git_repo else None
         context["git"] = {
+            "is_repo": in_git_repo,
             "branch": branch,
             "is_main": branch == "main" if branch else False,
-            "staged_files": get_staged_files(),
-            "unstaged_files": get_unstaged_files(),
+            "staged_files": get_staged_files() if in_git_repo else [],
+            "unstaged_files": get_unstaged_files() if in_git_repo else [],
         }
         context["private"] = is_private_mode()
     

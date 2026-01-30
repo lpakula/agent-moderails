@@ -32,7 +32,7 @@ ModeRails gives you a complete protocol for multi-session development
 - **Persistent memory across sessions** — return to tasks days later with full context intact
 - **Searchable task history** — agent learns from past work and similar features
 - **Epic-based grouping** — organize related tasks under a single epic, with shared context
-- **Git integration** — captures diffs, file changes, and commit hashes for every completed task
+- **Git integration** — captures diffs, file changes, and commit hashes for every completed task (non-git projects also supported with limited features)
 - **Explicit mode boundaries** — research can't write code, execute must follow the plan
 - **Enforced workflow** — prevents scope creep and direction changes mid-implementation
 
