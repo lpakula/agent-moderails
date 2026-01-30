@@ -595,12 +595,23 @@ def context(ctx):
 @context.command("list")
 @click.pass_context
 def context_list(ctx):
-    """List available memories and files from history."""
+    """List available skills, memories, and files from history."""
     services = get_services_or_exit(ctx)
     
     click.echo("## AVAILABLE CONTEXT\n")
     
-    # 1. List available memories
+    # 1. List available skills
+    skills = services["context"].list_skills()
+    click.echo("### SKILLS\n")
+    if skills:
+        for skill in skills:
+            click.echo(f"- {skill}")
+    else:
+        click.echo("No skills (add to skills/)")
+    
+    click.echo()
+    
+    # 2. List available memories
     memories = services["context"].list_memories()
     click.echo("### MEMORIES\n")
     if memories:
@@ -611,7 +622,7 @@ def context_list(ctx):
     
     click.echo()
     
-    # 2. Show files from history
+    # 3. Show files from history
     click.echo("### FILES\n")
     files_tree = services["context"].get_files_tree()
     if files_tree:
@@ -619,7 +630,7 @@ def context_list(ctx):
     else:
         click.echo("No files")
     
-    # 3. Usage instructions
+    # 4. Usage instructions
     click.echo("\n---\n")
     click.echo("### USAGE\n")
     click.echo("```sh")

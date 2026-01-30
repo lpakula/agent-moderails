@@ -12,6 +12,8 @@ class ContextService:
         self.mandatory_dir = self.context_dir / "mandatory"
         self.memories_dir = self.context_dir / "memories"
         self.history_file = moderails_dir / "history.jsonl"
+        # Skills directory is at project root (parent of .moderails)
+        self.skills_dir = moderails_dir.parent / "skills"
     
     def load_mandatory_context(self) -> Optional[str]:
         """Load all files from mandatory context directory.
@@ -101,6 +103,31 @@ class ContextService:
         
         return result
     
+    def list_skills(self) -> list[str]:
+        """List available Agent Skills from .cursor/skills directory.
+        
+        Returns skill directory names only (for reinforcement, not full loading).
+        Cursor supports skills natively - this just reminds agents what's available.
+        
+        Returns:
+            List of skill names (directory names containing SKILL.md)
+        """
+        if not self.skills_dir.exists():
+            return []
+        
+        skills = []
+        
+        # Each skill is a directory containing SKILL.md
+        for skill_dir in sorted(self.skills_dir.iterdir()):
+            if not skill_dir.is_dir():
+                continue
+            
+            skill_file = skill_dir / "SKILL.md"
+            if skill_file.exists():
+                skills.append(skill_dir.name)
+        
+        return skills
+
     def get_files_tree(self) -> Optional[str]:
         """Build a file tree from history.jsonl files_changed field.
         

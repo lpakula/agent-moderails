@@ -2,6 +2,16 @@
 
 Protocol uses the following types of context to help the agent understand your project:
 
+## Skills
+
+[Agent Skills](https://agentskills.io) are folders containing instructions and resources that agents can discover and use. Cursor and Claude support skills natively.
+
+**Location:** `skills/<skill-name>/SKILL.md` at project root.
+
+**How ModeRails uses skills:**  
+Skill names are listed in `#research` and `#fast` mode output. This serves as reinforcement for long-running sessions — reminding the agent what skills are available without inflating context. The agent already knows how to use skills (read the SKILL.md when relevant).
+
+
 ## Mandatory Context
 
 Files in `.moderails/context/mandatory/` contain essential project knowledge.

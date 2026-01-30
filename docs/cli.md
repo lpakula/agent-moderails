@@ -60,13 +60,13 @@ moderails epic update --epic <epic-id> --name "New Epic Name"
 ## Context Management
 
 ```bash
-# List available memories and files tree
+# List available skills, memories, and files tree
 moderails context list
 # Load specific memories (flags can be combined)
 moderails context load --memory auth --memory payments
 ```
 
-> **Note:** Mandatory context, list of available memories, and files tree are automatically injected when entering `#research` or `#fast` modes. Manual loading is only needed for additional memories.
+> **Note:** Mandatory context, skill names, list of available memories, and files tree are automatically injected when entering `#research` or `#fast` modes. Manual loading is only needed for additional memories.
 
 ## History Sync
 

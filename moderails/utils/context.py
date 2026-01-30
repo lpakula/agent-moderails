@@ -102,6 +102,7 @@ def build_mode_context(
         context["mandatory_context"] = services["context"].load_mandatory_context()
         context["memories"] = services["context"].list_memories()
         context["files_tree"] = services["context"].get_files_tree()
+        context["skills"] = services["context"].list_skills()
     
     # Research mode also needs current in-progress task and epic context
     if mode_name == "research":
