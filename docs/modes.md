@@ -33,7 +33,7 @@ Optional. Use if you want to explore alternative approaches to what was agreed i
 #plan
 ```
 
-The agent breaks down the work into atomic TODO items in the task file. Review and approve before moving to execution.
+The agent breaks down the work into atomic TODO items in the task file. The plan file is automatically created when entering this mode. Review and approve before moving to execution.
 
 ## 🔨 Execute
 
@@ -66,7 +66,7 @@ Mark task as completed, commit changes with conventional commit message. Git has
 #fast
 ```
 
-Context-aware coding without the protocol. Access the same context memory system (mandatory context, searchable context, task history) but skip the structured workflow.
+Context-aware coding without the protocol. Access the same context memory system (mandatory context, memories, task history) but skip the structured workflow.
 
 Best for small tasks, bug fixes, and quick iterations where you want memory benefits without mode switching.
 

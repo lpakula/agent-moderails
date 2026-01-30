@@ -9,6 +9,7 @@ from typing import Optional
 import click
 
 from . import __version__
+from .config import is_private_mode
 from .db.database import find_db_path, get_session, init_db
 from .db.models import TaskStatus, TaskType
 from .modes import get_mode
@@ -93,11 +94,12 @@ def cli(ctx):
 # ============== INIT ==============
 
 @cli.command()
+@click.option("--private", is_flag=True, help="Private mode: ignore all moderails files (don't commit to version control)")
 @click.pass_context
-def init(ctx):
+def init(ctx, private: bool):
     """Initialize moderails in current directory."""
     try:
-        db_path = init_db()
+        db_path = init_db(private=private)
         created_commands = create_command_files()
         
         if ctx.obj.get("json"):
@@ -110,6 +112,8 @@ def init(ctx):
             
             click.echo()
             click.echo(click.style("✓ ModeRails initialized successfully!", fg="green", bold=True))
+            if private:
+                click.echo(click.style("  🔒 Private mode: all .moderails files are gitignored", fg="yellow"))
             click.echo()
             click.echo(f"  Database:  {click.style(str(rel_db_path), fg='cyan')}")
             for cmd in rel_commands:
@@ -288,10 +292,12 @@ def task_complete(ctx, task_id: str, summary: Optional[str], commit_message: str
     
     Stages history.jsonl, commits with provided message, and updates task with git hash.
     If any git step fails, returns fallback instructions for manual completion.
+    In private mode, history.jsonl is not staged (it's gitignored).
     """
     services = get_services_or_exit(ctx)
     moderails_dir = get_moderails_dir(ctx.obj.get("db_path"))
     history_path = moderails_dir / "history.jsonl"
+    private_mode = is_private_mode()
     
     # Check for staged files (required for files_changed in history)
     staged_files = get_staged_files()
@@ -317,27 +323,28 @@ def task_complete(ctx, task_id: str, summary: Optional[str], commit_message: str
         
         # === Automated Git Workflow ===
         
-        # Step 1: Stage history.jsonl
-        time.sleep(0.2)  # Let file watchers settle
-        stage_result = subprocess.run(
-            ["git", "add", str(history_path)],
-            check=False,
-            capture_output=True,
-            text=True
-        )
-        if stage_result.returncode != 0:
-            click.echo("⚠️  Failed to stage history.jsonl")
-            click.echo("\n## FALLBACK: Complete git workflow manually")
-            click.echo("```bash")
-            click.echo(f"git add {history_path}")
-            click.echo(f"git commit -m \"{commit_message}\"")
-            click.echo(f"moderails task update --task {task_id} --git-hash $(git rev-parse HEAD)")
-            click.echo("```")
-            if stage_result.stderr:
-                click.echo(f"\nGit error: {stage_result.stderr.strip()}")
-            return
-        
-        click.echo("✅ Staged history.jsonl")
+        # Step 1: Stage history.jsonl (skip in private mode - it's gitignored)
+        if not private_mode:
+            time.sleep(0.2)  # Let file watchers settle
+            stage_result = subprocess.run(
+                ["git", "add", str(history_path)],
+                check=False,
+                capture_output=True,
+                text=True
+            )
+            if stage_result.returncode != 0:
+                click.echo("⚠️  Failed to stage history.jsonl")
+                click.echo("\n## FALLBACK: Complete git workflow manually")
+                click.echo("```bash")
+                click.echo(f"git add {history_path}")
+                click.echo(f"git commit -m \"{commit_message}\"")
+                click.echo(f"moderails task update --task {task_id} --git-hash $(git rev-parse HEAD)")
+                click.echo("```")
+                if stage_result.stderr:
+                    click.echo(f"\nGit error: {stage_result.stderr.strip()}")
+                return
+            
+            click.echo("✅ Staged history.jsonl")
         
         # Step 2: Commit
         commit_result = subprocess.run(
@@ -381,27 +388,6 @@ def task_complete(ctx, task_id: str, summary: Optional[str], commit_message: str
         
     except ValueError as e:
         click.echo(f"❌ {e}")
-
-
-def _try_stage_history(history_path: Path) -> bool:
-    """Try to stage history.jsonl, return True if successful."""
-    try:
-        time.sleep(0.2)
-        result = subprocess.run(
-            ["git", "add", str(history_path)],
-            check=False,
-            capture_output=True,
-            text=True
-        )
-        if result.returncode == 0:
-            click.echo("✅ Staged history.jsonl")
-            return True
-        else:
-            click.echo(f"⚠️  Could not auto-stage (run: git add {history_path})")
-            return False
-    except Exception:
-        click.echo(f"💡 Stage manually: git add {history_path}")
-        return False
 
 
 @task.command("list")

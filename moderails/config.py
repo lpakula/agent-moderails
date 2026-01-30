@@ -4,9 +4,16 @@ import json
 from pathlib import Path
 from typing import Optional
 
+from . import __version__
+
 
 MODERAILS_DIR = ".moderails"
 CONFIG_FILENAME = "config.json"
+
+
+def get_default_config(private: bool = False) -> dict:
+    """Return default config with current version."""
+    return {"version": __version__, "private": private}
 
 
 def find_config_path(start_path: Optional[Path] = None) -> Optional[Path]:
@@ -56,7 +63,7 @@ def load_config(config_path: Optional[Path] = None) -> dict:
             pass
     
     # Return defaults
-    return {"version": "1.0"}
+    return get_default_config()
 
 
 def save_config(config: dict) -> Path:
@@ -112,4 +119,21 @@ def get_db_path(config_path: Optional[Path] = None) -> Path:
     """
     moderails_dir = get_moderails_dir(config_path)
     return moderails_dir / "moderails.db"
+
+
+def is_private_mode(config_path: Optional[Path] = None) -> bool:
+    """
+    Check if moderails is running in private mode.
+    
+    In private mode, all .moderails files are gitignored and
+    history.jsonl is not committed.
+    
+    Args:
+        config_path: Explicit path to config.json (auto-discovers if None)
+        
+    Returns:
+        True if private mode is enabled
+    """
+    config = load_config(config_path)
+    return config.get("private", False)
 

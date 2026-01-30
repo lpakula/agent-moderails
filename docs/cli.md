@@ -5,6 +5,9 @@
 ```bash
 # Initialize in current directory (creates .moderails/)
 moderails init
+
+# Initialize in private mode (all .moderails files gitignored)
+moderails init --private
 ```
 
 ## Session Management
@@ -31,14 +34,17 @@ moderails epic list
 ## Task Management
 
 ```bash
-# Create task
-moderails task create --name "Task Name" [--type feature|fix|refactor|chore] [--status draft|in-progress] [--epic <epic-id>] [--no-file]
+# Create task (defaults to in-progress, plan file created when entering #plan mode)
+moderails task create --name "Task Name" [--type feature|fix|refactor|chore] [--status draft|in-progress] [--epic <epic-id>]
 
 # Update task
 moderails task update --task <task-id> [--name <name>] [--status <status>] [--type <type>] [--summary <text>]
 
 # Complete task (stages history, commits, updates git hash)
 moderails task complete --task <task-id> --commit-message "<type>: <description>" [--summary "<text>"]
+
+# Delete task
+moderails task delete --task <task-id> --confirm
 ```
 
 
@@ -54,13 +60,13 @@ moderails epic update --epic <epic-id> --name "New Epic Name"
 ## Context Management
 
 ```bash
-# List available memories and files from history
+# List available memories and files tree
 moderails context list
-# Load context (flags can be combined)
-moderails context load --mandatory --memory auth --memory payments
-# Load task context
-moderails task load --task <task-id>  
+# Load specific memories (flags can be combined)
+moderails context load --memory auth --memory payments
 ```
+
+> **Note:** Mandatory context, list of available memories, and files tree are automatically injected when entering `#research` or `#fast` modes. Manual loading is only needed for additional memories.
 
 ## History Sync
 

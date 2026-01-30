@@ -6,7 +6,7 @@ from typing import Optional
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
-from ..config import find_config_path, get_db_path as config_get_db_path, save_config
+from ..config import find_config_path, get_db_path as config_get_db_path, get_default_config, save_config
 from ..templates import get_template_path
 
 # Module-level engine and session factory
@@ -33,15 +33,18 @@ def find_db_path(start_path: Optional[Path] = None) -> Optional[Path]:
     return None
 
 
-def init_db() -> Path:
+def init_db(private: bool = False) -> Path:
     """
     Initialize a new database and configuration in .moderails directory.
+    
+    Args:
+        private: If True, all moderails files are gitignored and not committed.
     
     Returns:
         Path to the created database
     """
-    # Create config
-    config = {"version": "1.0"}
+    # Create config with private setting
+    config = get_default_config(private=private)
     config_path = save_config(config)
     
     # Get db path from config
@@ -56,7 +59,10 @@ def init_db() -> Path:
     
     # Create .gitignore in moderails directory
     gitignore_path = db_path.parent / ".gitignore"
-    gitignore_template = get_template_path("gitignore.txt")
+    if private:
+        gitignore_template = get_template_path("gitignore-private.txt")
+    else:
+        gitignore_template = get_template_path("gitignore.txt")
     gitignore_content = gitignore_template.read_text()
     gitignore_path.write_text(gitignore_content)
     

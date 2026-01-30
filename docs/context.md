@@ -13,7 +13,7 @@ Files in `.moderails/context/mandatory/` contain essential project knowledge.
 - Coding standards
 
 **When it's loaded:**  
-Automatically loaded when you start working on any task (when creating or loading tasks).
+Automatically injected when entering `#research` or `#fast` modes. No manual loading required.
 
 
 ## Memories Context
@@ -27,10 +27,11 @@ Files in `.moderails/context/memories/` are named context documents that the age
 - Technical guides
 
 **How it works:**
-1. The agent runs `moderails context list` to see available memories
-2. The agent loads specific memories with `moderails context load --memory auth --memory payments`
+When entering `#research` or `#fast` mode, the agent automatically sees:
+- All available memory names
+- The project files tree
 
-Flags can be combined: `moderails context load --mandatory --memory auth --file src/auth.ts`
+The agent can load specific memories with `moderails context load --memory auth --memory payments`
 
 This is deterministic - the agent knows exactly what's available and loads full documents by name, rather than searching with random queries that might miss.
 

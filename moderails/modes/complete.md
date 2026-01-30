@@ -60,8 +60,8 @@ moderails task complete --task {{ current_task.id if current_task else '<task-id
 **This single command will:**
 - Mark the task as completed in the database
 - Export the task to history.jsonl
-- Stage history.jsonl
-- Commit with your message
+{% if private %}- Commit with your message (history.jsonl is gitignored in private mode){% else %}- Stage history.jsonl
+- Commit with your message{% endif %}
 - Update task with git hash
 
 **Commit message format:**

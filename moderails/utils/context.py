@@ -2,6 +2,7 @@
 
 from typing import Any, Optional
 
+from ..config import is_private_mode
 from ..db.models import Task, TaskStatus
 from .git import get_current_branch, get_staged_files, get_unstaged_files
 
@@ -85,7 +86,7 @@ def build_mode_context(
             services["task"].create_plan_file(task_dict["id"])
             context["current_task"] = get_in_progress_task(services)
     
-    # Git state - only complete mode needs this
+    # Git state and private mode - only complete mode needs this
     if mode_name == "complete":
         branch = get_current_branch()
         context["git"] = {
@@ -94,6 +95,7 @@ def build_mode_context(
             "staged_files": get_staged_files(),
             "unstaged_files": get_unstaged_files(),
         }
+        context["private"] = is_private_mode()
     
     # Full context discovery - research and fast modes
     if mode_name in ("research", "fast"):
