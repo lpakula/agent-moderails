@@ -57,7 +57,7 @@ Stage only the files that are part of this task. Do NOT use `git add -A`.
 
 2. Complete task with commit:
 ```bash
-moderails task complete --task {{ current_task.id if current_task else '<task-id>' }} --summary "brief summary" --commit-message "{{ current_task.type if current_task else '<type>' }}: <description>"
+moderails task complete --id {{ current_task.id if current_task else '<task-id>' }} --summary "brief summary" --commit-message "{{ current_task.type if current_task else '<type>' }}: <description>"
 ```
 
 **This single command will:**
@@ -77,7 +77,7 @@ moderails task complete --task {{ current_task.id if current_task else '<task-id
 
 Complete task:
 ```bash
-moderails task complete --task {{ current_task.id if current_task else '<task-id>' }} --summary "brief summary"
+moderails task complete --id {{ current_task.id if current_task else '<task-id>' }} --summary "brief summary"
 ```
 
 **This command will:**

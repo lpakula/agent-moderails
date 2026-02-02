@@ -23,7 +23,7 @@ Abandon a task and reset all changes.
 
 1. Delete the task:
 ```bash
-moderails task delete --task {{ current_task.id if current_task else '<task-id>' }} --confirm
+moderails task delete --id {{ current_task.id if current_task else '<task-id>' }} --confirm
 ```
 
 2. Reset git changes:

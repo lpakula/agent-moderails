@@ -24,10 +24,13 @@ moderails migrate
 ## Listing
 
 ```bash
-# List tasks
-moderails list [--status <status>] [--epic-name <name>]
-moderails task list [--status <status>] [--epic-name <name>]
-# List epics
+# List tasks (human-friendly)
+moderails list [--status draft|in-progress|completed] [--epic-name <name>]
+
+# List tasks (agent-friendly table)
+moderails task list [--status draft|in-progress|completed] [--epic-name <name>]
+
+# List epics (agent-friendly table)
 moderails epic list
 ```
 
@@ -38,16 +41,16 @@ moderails epic list
 moderails task create --name "Task Name" [--type feature|fix|refactor|chore] [--status draft|in-progress] [--epic <epic-id>]
 
 # Update task
-moderails task update --task <task-id> [--name <name>] [--status <status>] [--type <type>] [--summary <text>]
+moderails task update --id <task-id> [--name <name>] [--status <status>] [--type <type>] [--summary <text>]
 
 # Complete task (in git repos: stages history, commits, updates git hash)
-moderails task complete --task <task-id> --commit-message "<type>: <description>" [--summary "<text>"]
+moderails task complete --id <task-id> --commit-message "<type>: <description>" [--summary "<text>"]
 
 # Complete task (non-git projects: marks complete and exports to history)
-moderails task complete --task <task-id> [--summary "<text>"]
+moderails task complete --id <task-id> [--summary "<text>"]
 
 # Delete task
-moderails task delete --task <task-id> --confirm
+moderails task delete --id <task-id> --confirm
 ```
 
 
@@ -57,7 +60,7 @@ moderails task delete --task <task-id> --confirm
 # Create epic
 moderails epic create --name "Epic Name"  
 # Update epic
-moderails epic update --epic <epic-id> --name "New Epic Name" 
+moderails epic update --id <epic-id> --name "New Epic Name" 
 ```
 
 ## Context Management

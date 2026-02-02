@@ -36,7 +36,7 @@ Work through ALL TODO items sequentially without stopping for confirmation.
 {% if current_task and current_task.status == "draft" %}
 1. Update task to in-progress:
 ```bash
-moderails task update --task {{ current_task.id }} --status in-progress
+moderails task update --id {{ current_task.id }} --status in-progress
 ```
 
 2. Read the task file: `{{ current_task.file_path }}`
@@ -63,7 +63,7 @@ moderails task update --task {{ current_task.id }} --status in-progress
 {% if current_task and current_task.status == "draft" %}
 1. Update task to in-progress:
 ```bash
-moderails task update --task {{ current_task.id }} --status in-progress
+moderails task update --id {{ current_task.id }} --status in-progress
 ```
 
 2. Read the task file: `{{ current_task.file_path }}`

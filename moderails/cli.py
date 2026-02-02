@@ -239,7 +239,7 @@ def task_create(ctx, name: str, epic: Optional[str], type: str, status: str):
 
 
 @task.command("update")
-@click.option("--task", "-t", "task_id", required=True, help="Task ID (6-character)")
+@click.option("--id", "-i", "task_id", required=True, help="Task ID (6-character)")
 @click.option("--name", help="New task name")
 @click.option("--status", "-s", type=click.Choice(["draft", "in-progress", "completed"]))
 @click.option("--type", type=click.Choice(["feature", "fix", "refactor", "chore"]), help="New task type")
@@ -266,7 +266,7 @@ def task_update(ctx, task_id: str, name: Optional[str], status: Optional[str], t
 
 
 @task.command("delete")
-@click.option("--task", "-t", "task_id", required=True, help="Task ID (6-character)")
+@click.option("--id", "-i", "task_id", required=True, help="Task ID (6-character)")
 @click.option("--confirm", is_flag=True, help="Confirm deletion")
 @click.pass_context
 def task_delete(ctx, task_id: str, confirm: bool):
@@ -283,7 +283,7 @@ def task_delete(ctx, task_id: str, confirm: bool):
 
 
 @task.command("complete")
-@click.option("--task", "-t", "task_id", required=True, help="Task ID (6-character)")
+@click.option("--id", "-i", "task_id", required=True, help="Task ID (6-character)")
 @click.option("--summary", "-s", help="Task summary")
 @click.option("--commit-message", "-m", help="Git commit message")
 @click.pass_context
@@ -400,7 +400,7 @@ def task_complete(ctx, task_id: str, summary: Optional[str], commit_message: Opt
 @click.option("--epic-name", "-e", help="Filter by epic name")
 @click.pass_context
 def task_list(ctx, status: Optional[str], epic_name: Optional[str]):
-    """List all tasks (active first, completed at bottom)."""
+    """List all tasks as a simple table (for agents)."""
     services = get_services_or_exit(ctx)
     
     # Get all tasks
@@ -420,16 +420,20 @@ def task_list(ctx, status: Optional[str], epic_name: Optional[str]):
         )
     )
     
-    # Display: task_id [type] [status] [epic] [timestamp] - task name
+    # Simple table format: id | name | status | epic_id
+    click.echo("id     | name                                             | status      | epic_id")
+    click.echo("-------|--------------------------------------------------|-------------|--------")
     for task in sorted_tasks:
-        click.echo(format_task_line(task))
+        name_truncated = task.name[:48] + ".." if len(task.name) > 50 else task.name
+        epic_id = task.epic_id if task.epic_id else ""
+        click.echo(f"{task.id} | {name_truncated:<48} | {task.status.value:<11} | {epic_id}")
 
 
 @task.command("load")
-@click.option("--task", "-t", "task_id", required=True, help="Task ID (6-character)")
+@click.option("--id", "-i", "task_id", required=True, help="Task ID (6-character)")
 @click.pass_context
 def task_load(ctx, task_id: str):
-    """Load task details and epic context."""
+    """Load task details and plan file (task context only)."""
     services = get_services_or_exit(ctx)
     moderails_dir = get_moderails_dir(ctx.obj.get("db_path"))
     
@@ -447,26 +451,18 @@ def task_load(ctx, task_id: str):
     click.echo(f"**Status**: {task.status.value}")
     if task.epic:
         click.echo(f"**Epic**: {task.epic.name} ({task.epic_id})")
-    click.echo(f"**File**: _moderails/{task.file_name}")
+    if task.file_name:
+        click.echo(f"**File**: _moderails/{task.file_name}")
     if task.summary:
         click.echo(f"**Summary**: {task.summary}")
     click.echo()
     
     # Load task file content
-    task_file = moderails_dir / task.file_name
-    if task_file.exists():
-        click.echo("## TASK PLAN\n")
-        click.echo(task_file.read_text())
-        click.echo()
-    
-    # Load epic context if task belongs to an epic
-    if task.epic:
-        click.echo("## EPIC CONTEXT\n")
-        epic_summary = services["epic"].get_summary(task.epic.name)
-        if epic_summary:
-            click.echo(epic_summary)
-        else:
-            click.echo("(no completed tasks in this epic yet)")
+    if task.file_name:
+        task_file = moderails_dir / task.file_name
+        if task_file.exists():
+            click.echo("## TASK PLAN\n")
+            click.echo(task_file.read_text())
 
 
 # ============== EPIC GROUP ==============
@@ -493,7 +489,7 @@ def epic_create(ctx, name: str):
 
 
 @epic.command("update")
-@click.option("--epic", "-e", "epic_id", required=True, help="Epic ID (6-character)")
+@click.option("--id", "-i", "epic_id", required=True, help="Epic ID (6-character)")
 @click.option("--name", "-n", required=True, help="New epic name")
 @click.pass_context
 def epic_update(ctx, epic_id: str, name: str):
@@ -517,7 +513,7 @@ def epic_update(ctx, epic_id: str, name: str):
 @epic.command("list")
 @click.pass_context
 def epic_list(ctx):
-    """List all epics."""
+    """List all epics as a simple table (for agents)."""
     services = get_services_or_exit(ctx)
     
     epics = services["epic"].list_all()
@@ -526,8 +522,33 @@ def epic_list(ctx):
         click.echo("No epics found.")
         return
     
+    # Simple table format: id | name
+    click.echo("id     | name")
+    click.echo("-------|--------------------------------------------------")
     for epic in epics:
-        click.echo(f"{click.style(epic.id, fg='cyan')} - {click.style(epic.name, fg='blue', bold=True)}")
+        click.echo(f"{epic.id} | {epic.name}")
+
+
+@epic.command("load")
+@click.option("--id", "-i", "epic_id", required=True, help="Epic ID (6-character)")
+@click.option("--short", "-s", is_flag=True, help="Show only filenames instead of full diffs")
+@click.pass_context
+def epic_load(ctx, epic_id: str, short: bool):
+    """Load epic context (completed tasks, summaries, and changes)."""
+    services = get_services_or_exit(ctx)
+    
+    # Get epic by ID
+    epic_obj = services["epic"].get(epic_id)
+    if not epic_obj:
+        click.echo(f"❌ Epic '{epic_id}' not found")
+        return
+    
+    # Get epic summary
+    epic_summary = services["epic"].get_summary(epic_obj.name, short=short)
+    if epic_summary:
+        click.echo(epic_summary)
+    else:
+        click.echo(f"# Epic: {epic_obj.name}\n\nNo completed tasks yet.")
 
 
 # ============== MODE ==============

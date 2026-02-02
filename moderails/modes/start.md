@@ -8,13 +8,13 @@ Modal control system for AI agents.
 # Task Management
 moderails task list [--status <draft|in-progress|completed>]
 moderails task create --name "Task Name" [--epic <epic-id>] [--type feature|fix|refactor|chore]
-moderails task complete --task <task-id> --commit-message "..."
-moderails task update --task <task-id> [--name <name>] [--status <status>] [--type <type>] [--summary <text>]
+moderails task complete --id <task-id> --commit-message "..."
+moderails task update --id <task-id> [--name <name>] [--status <status>] [--type <type>] [--summary <text>]
 
 # Epic Management
 moderails epic list
 moderails epic create --name "epic-name"
-moderails epic update --epic <epic-id> --name "new-epic-name"
+moderails epic update --id <epic-id> --name "new-epic-name"
 
 # Context Management
 moderails context list                                # List available memories and files
@@ -79,7 +79,7 @@ Example: `#execute --no-confirmation` → `moderails mode --name execute --no-co
 {% for t in draft_tasks %}- `{{ t.id }}` - {{ t.name }}{% if t.epic %} ({{ t.epic.name }}){% endif %}
 {% endfor %}
 1. Ask user which draft to start, or create a new task
-2. To start a draft: `moderails task update --task <id> --status in-progress`
+2. To start a draft: `moderails task update --id <id> --status in-progress`
 3. Advise user to type `#research` to begin analysis
 
 {% else %}

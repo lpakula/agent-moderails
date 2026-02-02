@@ -70,7 +70,7 @@ git add <file1> <file2> <file3>...
 
 3. Complete the task (auto-commits and updates git hash):
 ```sh
-moderails task complete --task <task-id> --commit-message "<type>: <description>" [--summary "<brief summary>"]
+moderails task complete --id <task-id> --commit-message "<type>: <description>" [--summary "<brief summary>"]
 ```
 
 **Result**: Structured commit with searchable task history preserved for future context.
