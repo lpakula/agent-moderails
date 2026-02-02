@@ -157,16 +157,20 @@ def get_patch_unified(hash: str, cwd: str = ".") -> str:
     return output.rstrip() if output else ""
 
 
-def truncate_patch(patch: str, max_lines_per_file: int = 100) -> str:
+def truncate_patch(patch: str, max_lines_per_file: int = 50) -> str:
     """
     Truncate per-file diffs to avoid context overload.
     
+    - Deleted files: show "[file deleted]" instead of full content
+    - Renamed files with no changes: show "[renamed from X]"
+    - Large diffs: show "[diff skipped: N lines]"
+    
     Args:
         patch: Unified diff patch output
-        max_lines_per_file: Maximum lines to show per file diff
+        max_lines_per_file: Maximum lines to show per file diff (default 50)
     
     Returns:
-        Truncated patch with markers for omitted content
+        Truncated patch - noise reduced for agent consumption
     """
     if not patch:
         return ""
@@ -174,7 +178,76 @@ def truncate_patch(patch: str, max_lines_per_file: int = 100) -> str:
     lines = patch.splitlines()
     result = []
     current_file_start = None
+    current_filename = None
     in_file = False
+    
+    def extract_filename(diff_line: str) -> str:
+        """Extract filename from 'diff --git a/file b/file' line."""
+        parts = diff_line.split(" b/")
+        return parts[-1] if len(parts) > 1 else diff_line
+    
+    def is_deleted_file(file_content: list[str]) -> bool:
+        """Check if this is a deleted file diff."""
+        # Skip first line (always "diff --git...")
+        for line in file_content[1:]:
+            if line.startswith("deleted file mode"):
+                return True
+            if line.startswith("@@"):
+                break
+        return False
+    
+    def is_new_file(file_content: list[str]) -> bool:
+        """Check if this is a new file diff."""
+        # Skip first line (always "diff --git...")
+        for line in file_content[1:]:
+            if line.startswith("new file mode"):
+                return True
+            if line.startswith("@@"):
+                break
+        return False
+    
+    def is_rename_only(file_content: list[str]) -> tuple[bool, str | None]:
+        """Check if this is a rename with no content changes. Returns (is_rename_only, old_name)."""
+        old_name = None
+        has_rename = False
+        has_hunks = False
+        
+        # Skip first line (always "diff --git...")
+        for line in file_content[1:]:
+            if line.startswith("rename from "):
+                old_name = line.replace("rename from ", "").strip()
+                has_rename = True
+            if line.startswith("@@"):
+                has_hunks = True
+                break
+        
+        return (has_rename and not has_hunks, old_name)
+    
+    def process_file(file_content: list[str], filename: str):
+        """Process a single file's diff content."""
+        # Check for deleted file
+        if is_deleted_file(file_content):
+            result.append(f"D  {filename}")
+            return
+        
+        # Check for rename-only
+        rename_only, old_name = is_rename_only(file_content)
+        if rename_only and old_name:
+            result.append(f"R  {old_name} -> {filename}")
+            return
+        
+        # Check for new file that's too large
+        if is_new_file(file_content) and len(file_content) > max_lines_per_file:
+            result.append(f"A  [{len(file_content)} lines] {filename}")
+            return
+        
+        # Check for modified file that's too large
+        if len(file_content) > max_lines_per_file:
+            result.append(f"M  [{len(file_content)} lines] {filename}")
+            return
+        
+        # Include full diff
+        result.extend(file_content)
     
     for i, line in enumerate(lines):
         # Detect start of new file diff
@@ -182,27 +255,17 @@ def truncate_patch(patch: str, max_lines_per_file: int = 100) -> str:
             # Process previous file if any
             if in_file and current_file_start is not None:
                 file_content = lines[current_file_start:i]
-                if len(file_content) > max_lines_per_file:
-                    # Truncate and add marker
-                    result.extend(file_content[:max_lines_per_file])
-                    omitted = len(file_content) - max_lines_per_file
-                    result.append(f"... [diff truncated: +{omitted} more lines omitted for context efficiency]")
-                else:
-                    result.extend(file_content)
+                process_file(file_content, current_filename or "unknown")
             
             # Start new file
             current_file_start = i
+            current_filename = extract_filename(line)
             in_file = True
         
     # Process last file
     if in_file and current_file_start is not None:
         file_content = lines[current_file_start:]
-        if len(file_content) > max_lines_per_file:
-            result.extend(file_content[:max_lines_per_file])
-            omitted = len(file_content) - max_lines_per_file
-            result.append(f"... [diff truncated: +{omitted} more lines omitted for context efficiency]")
-        else:
-            result.extend(file_content)
+        process_file(file_content, current_filename or "unknown")
     
     return "\n".join(result) if result else patch
 
@@ -214,14 +277,13 @@ def format_commit_diff(hash: str, cwd: str = ".") -> str:
     Format:
         @c <hash>
         @s <subject>
-        @f
-        <name-status lines>
         @p
         <patch>
         @end
+    
+    Note: File list (@f) is omitted as it's redundant with the patch.
     """
     commit_hash, subject = get_commit_meta(hash, cwd)
-    name_status = get_name_status(hash, cwd)
     patch = get_patch_unified(hash, cwd)
     
     # Truncate large diffs to avoid context overload
@@ -232,10 +294,6 @@ def format_commit_diff(hash: str, cwd: str = ".") -> str:
     
     if subject:
         parts.append(f"@s {subject}")
-    
-    if name_status:
-        parts.append("@f")
-        parts.append(name_status)
     
     if patch:
         parts.append("@p")
@@ -276,20 +334,21 @@ def generate_epic_diff(git_hashes: list[str], cwd: str = ".") -> str:
 
 def generate_epic_files_changed(git_hashes: list[str], cwd: str = ".") -> str:
     """
-    Generate simple list of files changed across commits.
+    Generate list of files changed across commits with status indicators.
     
     Args:
         git_hashes: List of commit hashes in chronological order
         cwd: Working directory for git commands
     
     Returns:
-        Simple list of all files touched in the epic
+        List of files with status (A=added, M=modified, D=deleted, R=renamed)
     """
     if not git_hashes:
         return ""
     
-    # Collect all unique files
-    files = set()
+    # Collect files with their status (file -> status)
+    # Later status overwrites earlier (e.g., A then M -> M)
+    files: dict[str, str] = {}
     
     for hash in git_hashes:
         if not hash or not hash.strip():
@@ -306,20 +365,28 @@ def generate_epic_files_changed(git_hashes: list[str], cwd: str = ".") -> str:
             
             status = parts[0].strip()
             
-            # Get all files regardless of operation type
+            # Normalize status to single letter
+            if status.startswith("R"):
+                status_char = "R"
+            elif status.startswith("C"):
+                status_char = "C"
+            else:
+                status_char = status[0] if status else "M"
+            
+            # Get filename based on operation type
             if status.startswith("R") and len(parts) > 2:
                 # For renames, include the new filename
-                files.add(parts[2])
+                files[parts[2]] = status_char
             elif len(parts) > 1:
-                files.add(parts[1])
+                files[parts[1]] = status_char
     
-    # Build simple list
+    # Build list with status
     if not files:
         return ""
     
     output = []
-    for f in sorted(files):
-        output.append(f"- {f}")
+    for f in sorted(files.keys()):
+        output.append(f"{files[f]}  {f}")
     
     return "\n".join(output)
 

@@ -7,7 +7,7 @@ from typing import Optional
 from sqlalchemy.orm import Session
 
 from ..db.models import Epic, Task, TaskStatus
-from ..utils.git import generate_epic_diff, generate_epic_files_changed, get_name_status
+from ..utils.git import generate_epic_diff, generate_epic_files_changed
 
 
 def is_valid_slug(name: str) -> bool:
@@ -84,41 +84,21 @@ class EpicService:
             parts.append(f"### {idx}. {task.name} ({date_str})\n")
             parts.append(f"**Summary**: {task.summary}\n")
             
-            # Include task file content if exists
-            if self.moderails_dir and task.file_name:
-                task_file = self.moderails_dir / task.file_name
-                if task_file.exists():
-                    try:
-                        task_content = task_file.read_text().strip()
-                        if task_content:
-                            parts.append("**Task Plan**:\n")
-                            parts.append(task_content)
-                            parts.append("")
-                    except Exception:
-                        pass
-            
-            # Show files and diffs if git hash exists
+            # Show files or diff based on mode
             if task.git_hash and task.git_hash.strip():
                 git_hash = task.git_hash.strip()
                 
                 if short:
-                    # Short format: only filenames for this task
+                    # Short format: file list with status (A/M/D/R)
                     files_changed = generate_epic_files_changed([git_hash])
                     if files_changed:
-                        parts.append("**Files changed**:")
+                        parts.append("**Files**:")
                         parts.append(files_changed)
                 else:
-                    # Full format: show diff for this task
-                    name_status = get_name_status(git_hash)
-                    if name_status:
-                        parts.append("**Files changed**:")
-                        for line in name_status.splitlines():
-                            parts.append(f"  {line}")
-                        parts.append("")
-                    
+                    # Full format: git diff only (includes filenames)
                     task_diff = generate_epic_diff([git_hash])
                     if task_diff:
-                        parts.append("**Changes**:")
+                        parts.append("**Diff**:")
                         parts.append(task_diff)
             
             task_parts.append("\n".join(parts))
