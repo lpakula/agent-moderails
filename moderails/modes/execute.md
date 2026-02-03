@@ -79,7 +79,7 @@ moderails task update --id {{ current_task.id }} --status in-progress
    
    c) **Explain** what you changed
    
-   d) **STOP and WAIT** for user confirmation before continuing
+   d) **STOP and WAIT** - say "Reply to continue." and wait for user confirmation
    
    e) After confirmation, repeat loop for next TODO item
 
@@ -103,6 +103,7 @@ moderails task update --id {{ current_task.id }} --status in-progress
 
 - No new tasks beyond TODO list
 - No creative additions
+- Do NOT suggest `#abort` - it's destructive and should only be used manually by the user
 
 ---
 **YOU MUST FOLLOW THE WORKFLOW**
