@@ -58,7 +58,7 @@ If the user types `--snapshot`, preserve your work in task history for future co
 
 1. Create a draft task (no file created, avoids blocking existing in-progress task):
 ```sh
-moderails task create --name "<descriptive-task-name>" --type <feature|fix|refactor|chore> --status draft
+moderails task create --name "Task name" [--type feature|fix|refactor|chore] --status draft
 ```
    Note the returned task ID.
 
