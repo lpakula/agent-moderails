@@ -13,13 +13,20 @@ moderails init --private
 ## Session Management
 
 ```bash
-# Start session
+# Start session (shows status, in-progress tasks, available epics)
 moderails start
+
+# Instant resume — reload full session context without prompts
+moderails start --rerail
+
 # Get mode definition
 moderails mode --name <mode>
+
 # Run database migrations
 moderails migrate
 ```
+
+> **Tip:** Use `/moderails --rerail` in your editor to instantly resume an interrupted session with full context (protocol rules, epic skills, task plan, current mode).
 
 ## Listing
 
@@ -58,10 +65,25 @@ moderails task delete --id <task-id> --confirm
 
 ```bash
 # Create epic
-moderails epic create --name "Epic Name"  
-# Update epic
-moderails epic update --id <epic-id> --name "New Epic Name" 
+moderails epic create --name "Epic Name"
+
+# Create epic with skills attached
+moderails epic create --name "Epic Name" --skills auth --skills payments
+
+# Update epic name
+moderails epic update --id <epic-id> --name "New Epic Name"
+
+# Add skill to epic
+moderails epic update --id <epic-id> --add-skill <skill-name>
+
+# Remove skill from epic
+moderails epic update --id <epic-id> --remove-skill <skill-name>
+
+# Load epic context (shows tasks, skills, and recent history)
+moderails epic load --id <epic-id>
 ```
+
+> **Skills:** Epic skills are automatically loaded when working on tasks within that epic. Skills provide domain-specific context (e.g., `auth`, `payments`, `database`) that helps the agent understand project patterns.
 
 ## Context Management
 

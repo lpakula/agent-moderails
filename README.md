@@ -30,8 +30,9 @@ This works for small isolated tasks — but breaks down for real projects.
 ModeRails gives you a complete protocol for multi-session development
 
 - **Persistent memory across sessions** — return to tasks days later with full context intact
+- **Session tracking with instant resume** — pick up exactly where you left off with `/moderails --rerail`
 - **Searchable task history** — agent learns from past work and similar features
-- **Epic-based grouping** — organize related tasks under a single epic, with shared context
+- **Epic-based grouping** — organize related tasks under a single epic, with shared context and skills
 - **Git integration** — captures diffs, file changes, and commit hashes for every completed task (non-git projects also supported with limited features)
 - **Explicit mode boundaries** — research can't write code, execute must follow the plan
 - **Enforced workflow** — prevents scope creep and direction changes mid-implementation
@@ -39,6 +40,7 @@ ModeRails gives you a complete protocol for multi-session development
 **ModeRails is opt-in, not mandatory.** You choose when to use it:
 
 - **For structured work**: Initialise the protocol with `/moderails` command and follow the full protocol
+- **Resume interrupted work**: Use `/moderails --rerail` to instantly restore full session context
 - **For small tasks & bug fixes**: Use **Fast mode** (`#fast`) — take advantage of persistent memory and context loading without the protocol
 - **No need for better context and enhanced agent cooperation?** Keep using regular chat
 

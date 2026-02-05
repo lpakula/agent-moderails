@@ -7,7 +7,7 @@ Protocol uses the following types of context to help the agent understand your p
 [Agent Skills](https://agentskills.io) are folders containing instructions and resources that agents can discover and use. Cursor and Claude support skills natively.
 
 **How ModeRails uses skills:**  
-The agent already knows how to use skills (read the SKILL.md when relevant). ModeRails just ensures the skill names stay visible in mode output, so they're not forgotten during extended conversations.
+The agent already knows how to use skills (read the SKILL.md when relevant). ModeRails ensures skill names stay visible when starting a session and are refreshed on `--rerail`, so they're not forgotten during extended conversations.
 
 
 ## Mandatory Context
@@ -50,10 +50,17 @@ Epics group related tasks together, providing continuity across multiple tasks w
 **What's included:**
 - Completed tasks with summaries (chronological order)
 - Files changed across all epic tasks
-- Optimised git diffs from all epic taks
+- Optimised git diffs from all epic tasks
+- Epic skills (domain-specific context)
 
 **When it's loaded:**  
 Automatically loaded when working on a task that belongs to an epic. This gives the agent full context of the feature being built, so each new task builds on previous work without repeating questions or decisions.
+
+### Epic Skills
+
+Attach skills to epics to provide domain-specific context for all tasks within that epic.
+
+When you work on a task within an epic, attached skills are automatically surfaced so the agent knows which domain knowledge is relevant. This is especially useful for complex features that span multiple skills (e.g., a checkout flow that needs both `payments` and `auth` context).
 
 
 ## Task History

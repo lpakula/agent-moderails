@@ -6,8 +6,23 @@ Modes define clear boundaries — no skipping ahead, no mixing phases.
 🔍 Research → 📋 Plan → 🔨 Execute → ✅ Complete
 ```
 
-
 The agent asks you to describe what you want to build before exploring your codebase.
+
+## Session Resume
+
+ModeRails tracks your session state — current mode, loaded memories, and task progress. When you return to an interrupted task:
+
+```
+/moderails --rerail
+```
+
+This instantly restores:
+- Protocol rules and available commands
+- Epic skills attached to your current task
+- Task plan and TODO progress
+- Current mode instructions
+
+No prompts, no questions — just full context reload so you can continue where you left off.
 
 ## 🔍 Research
 
