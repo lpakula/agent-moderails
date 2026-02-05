@@ -37,10 +37,15 @@ ModeRails gives you a complete protocol for multi-session development
 - **Explicit mode boundaries** — research can't write code, execute must follow the plan
 - **Enforced workflow** — prevents scope creep and direction changes mid-implementation
 
+**How the agent stays on track?**
+
+Unlike system prompts that are loaded once and gradually forgotten, ModeRails loads mode instructions **on demand** — every time you switch modes with `#research`, `#plan`, or `#execute`, the agent receives fresh, focused instructions for that phase.
+
+If the agent starts drifting or hallucinating mid-session, just run `/moderails --rerail`. This reloads the full protocol, task context, skills, and current mode — putting the agent back on track without starting a new conversation.
+
 **ModeRails is opt-in, not mandatory.** You choose when to use it:
 
 - **For structured work**: Initialise the protocol with `/moderails` command and follow the full protocol
-- **Resume interrupted work**: Use `/moderails --rerail` to instantly restore full session context
 - **For small tasks & bug fixes**: Use **Fast mode** (`#fast`) — take advantage of persistent memory and context loading without the protocol
 - **No need for better context and enhanced agent cooperation?** Keep using regular chat
 
