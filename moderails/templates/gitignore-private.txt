@@ -1,3 +1,0 @@
-# Private mode: ignore all moderails files
-# These files will not be committed to version control
-*

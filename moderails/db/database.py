@@ -57,14 +57,34 @@ def init_db(private: bool = False) -> Path:
     from .migrations import init_schema
     init_schema(db_path)
     
-    # Create .gitignore in moderails directory
+    # Create .gitignore in moderails directory (always use standard template)
     gitignore_path = db_path.parent / ".gitignore"
-    if private:
-        gitignore_template = get_template_path("gitignore-private.txt")
-    else:
-        gitignore_template = get_template_path("gitignore.txt")
+    gitignore_template = get_template_path("gitignore.txt")
     gitignore_content = gitignore_template.read_text()
     gitignore_path.write_text(gitignore_content)
+    
+    # In private mode, add pattern to project's root .gitignore
+    if private:
+        project_root = Path.cwd()
+        root_gitignore = project_root / ".gitignore"
+        
+        private_pattern = "*moderails*"
+        
+        # Read existing content or start fresh
+        existing_content = ""
+        if root_gitignore.exists():
+            existing_content = root_gitignore.read_text()
+        
+        # Add pattern if it doesn't already exist
+        if private_pattern not in existing_content:
+            new_content = existing_content.rstrip()
+            if new_content and not new_content.endswith("\n"):
+                new_content += "\n"
+            if new_content:
+                new_content += "\n"
+            new_content += "# moderails (private mode)\n"
+            new_content += f"{private_pattern}\n"
+            root_gitignore.write_text(new_content)
     
     # Create context directories
     context_dir = db_path.parent / "context"
