@@ -1,10 +1,38 @@
 """Context builder for dynamic mode templates."""
 
+from pathlib import Path
 from typing import Any, Optional
 
 from ..config import is_private_mode
+from ..db.database import find_db_path
 from ..db.models import Task, TaskStatus
+from ..modes import get_mode
 from .git import get_current_branch, get_staged_files, get_unstaged_files, is_git_repo
+
+
+def load_protocol_partial() -> str:
+    """Load the shared protocol partial.
+    
+    Returns:
+        Content of the protocol.md partial, or empty string if not found
+    """
+    partial_path = Path(__file__).parent.parent / "modes" / "partials" / "protocol.md"
+    if partial_path.exists():
+        return partial_path.read_text()
+    return ""
+
+
+def get_project_root() -> Optional[Path]:
+    """Get the project root directory (parent of _moderails).
+    
+    Returns:
+        Absolute path to project root, or None if no moderails found
+    """
+    db_path = find_db_path()
+    if db_path:
+        # db is at _moderails/moderails.db, so parent.parent is project root
+        return db_path.parent.parent
+    return None
 
 
 def get_in_progress_task(services: dict) -> Optional[dict]:
@@ -67,12 +95,17 @@ def build_mode_context(
     # Always include flags for conditional template rendering
     context["flags"] = flags or []
     
-    # Start mode - needs in-progress task, draft tasks, and epics
+    # Always include project root so agent knows which project it's working in
+    project_root = get_project_root()
+    context["project_root"] = str(project_root) if project_root else None
+    
+    # Start mode - needs in-progress task, draft tasks, epics, and skills
     if mode_name == "start":
         context["current_task"] = get_in_progress_task(services)
         context["draft_tasks"] = get_draft_tasks(services)
         epics = services["epic"].list_all()
         context["epics"] = [{"id": e.id, "name": e.name} for e in epics]
+        context["skills"] = services["context"].list_skills()
     
     # Task-aware modes - need current in-progress task only
     if mode_name in ("execute", "complete", "plan", "brainstorm", "abort"):
@@ -104,7 +137,6 @@ def build_mode_context(
         context["mandatory_context"] = services["context"].load_mandatory_context()
         context["memories"] = services["context"].list_memories()
         context["files_tree"] = services["context"].get_files_tree()
-        context["skills"] = services["context"].list_skills()
     
     # Research mode also needs current in-progress task and epic context
     if mode_name == "research":
@@ -116,3 +148,88 @@ def build_mode_context(
             context["epic_context"] = epic_summary
     
     return context
+
+
+def build_rerail_context(services: dict, task, project_root) -> str:
+    """Build session context output for --rerail flag (instant resume).
+    
+    Args:
+        services: Dict containing task, context, session services
+        task: The in-progress task object
+        project_root: Path to the project root
+        
+    Returns:
+        Formatted session context string
+    """
+    epic = task.epic if task else None
+    active_session = services["session"].get_active()
+    
+    output = []
+    
+    # Header
+    output.append("# Moderails Session\n")
+    if project_root:
+        output.append(f"**Project**: `{project_root}`")
+    output.append(f"**Task**: {task.name} (`{task.id}`) [{task.status.value}]")
+    if epic:
+        output.append(f"**Epic**: {epic.name} (`{epic.id}`)")
+    if active_session:
+        output.append(f"**Mode**: {active_session.current_mode.upper()}")
+    output.append("")
+    
+    output.append("---\n")
+    
+    # Protocol rules (from partial)
+    protocol_content = load_protocol_partial()
+    if protocol_content:
+        output.append(protocol_content)
+        output.append("")
+        output.append("---\n")
+    
+    # Mandatory context
+    mandatory_content = services["context"].load_mandatory_context()
+    if mandatory_content:
+        output.append(mandatory_content)
+        output.append("")
+        output.append("---\n")
+    
+    # Epic skills
+    if epic:
+        skills = epic.get_skills()
+        if skills:
+            output.append(f"## Epic Skills ({epic.name})\n")
+            for skill in skills:
+                output.append(f"- {skill} (skills/{skill}/SKILL.md)")
+            output.append("")
+            output.append("---\n")
+    
+    # Task plan
+    if task.file_name:
+        task_content = services["task"].get_task_content(task.id)
+        if task_content:
+            output.append("## Task Plan\n")
+            output.append(f"File: `_moderails/{task.file_name}`\n")
+            output.append(task_content)
+            output.append("")
+            output.append("---\n")
+    
+    # Current mode instructions (skip for "start" - protocol already loaded above)
+    mode = active_session.current_mode
+    if mode != "start":
+        mode_context = build_mode_context(services, mode)
+        mode_content = get_mode(mode, mode_context)
+        if mode_content:
+            output.append(f"## Current Mode: {mode.upper()}\n")
+            output.append(mode_content)
+            output.append("")
+            output.append("---\n")
+    
+    # Resume instruction (ask before acting)
+    output.append("## Resume\n")
+    if mode == "start":
+        output.append("Session loaded. Ask user to describe the task in more detail before proceeding.")
+        output.append("Once you understand the requirements, suggest `#research` to begin analysis.")
+    else:
+        output.append(f"Current mode is `{mode.upper()}`. Ask the user what to do next before taking any action.")
+    
+    return "\n".join(output)
