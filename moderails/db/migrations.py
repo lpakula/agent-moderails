@@ -27,9 +27,22 @@ MIGRATIONS = {
             FOREIGN KEY (epic_id) REFERENCES epics(id)
         );
     """,
-    # Future migrations go here:
-    # 2: "ALTER TABLE tasks ADD COLUMN priority TEXT;",
-    # 3: "ALTER TABLE tasks ADD COLUMN deadline DATETIME;",
+    2: """
+        -- Add skills column to epics table
+        ALTER TABLE epics ADD COLUMN skills TEXT DEFAULT '[]';
+    """,
+    3: """
+        -- Create sessions table
+        CREATE TABLE IF NOT EXISTS sessions (
+            id TEXT PRIMARY KEY,
+            task_id TEXT NOT NULL UNIQUE,
+            current_mode TEXT DEFAULT 'start',
+            loaded_memories TEXT DEFAULT '[]',
+            created_at DATETIME,
+            updated_at DATETIME,
+            FOREIGN KEY (task_id) REFERENCES tasks(id)
+        );
+    """,
 }
 
 CURRENT_VERSION = max(MIGRATIONS.keys())
@@ -93,6 +106,13 @@ def needs_migration(db_path: Path) -> bool:
     return current < CURRENT_VERSION
 
 
+def column_exists(conn, table: str, column: str) -> bool:
+    """Check if a column exists in a table."""
+    result = conn.execute(text(f"PRAGMA table_info({table})"))
+    columns = [row[1] for row in result.fetchall()]
+    return column in columns
+
+
 def run_migration(db_path: Path, version: int) -> None:
     """Run a specific migration."""
     if version not in MIGRATIONS:
@@ -102,6 +122,13 @@ def run_migration(db_path: Path, version: int) -> None:
     
     try:
         with engine.connect() as conn:
+            # Handle migration 2 specially - check if column exists first
+            if version == 2:
+                if column_exists(conn, "epics", "skills"):
+                    # Column already exists, skip this migration
+                    conn.commit()
+                    return
+            
             # Split migration into separate statements (SQLite limitation)
             migration_sql = MIGRATIONS[version]
             statements = [s.strip() for s in migration_sql.split(';') if s.strip()]
