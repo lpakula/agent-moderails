@@ -82,7 +82,6 @@ def init_db(private: bool = False) -> Path:
                 new_content += "\n"
             if new_content:
                 new_content += "\n"
-            new_content += "# moderails (private mode)\n"
             new_content += f"{private_pattern}\n"
             root_gitignore.write_text(new_content)
     
