@@ -37,13 +37,46 @@ class Epic(Base):
     
     id: str = Column(String(6), primary_key=True, default=generate_task_id)
     name: str = Column(String(255), nullable=False, unique=True)
+    skills: str = Column(Text, default="[]")  # JSON array of skill names
     
     tasks = relationship("Task", back_populates="epic")
+    
+    def get_skills(self) -> list[str]:
+        """Get skills as a list."""
+        import json
+        try:
+            return json.loads(self.skills or "[]")
+        except json.JSONDecodeError:
+            return []
+    
+    def set_skills(self, skill_list: list[str]) -> None:
+        """Set skills from a list."""
+        import json
+        self.skills = json.dumps(skill_list)
+    
+    def add_skill(self, skill_name: str) -> bool:
+        """Add a skill if not already present. Returns True if added."""
+        skills = self.get_skills()
+        if skill_name not in skills:
+            skills.append(skill_name)
+            self.set_skills(skills)
+            return True
+        return False
+    
+    def remove_skill(self, skill_name: str) -> bool:
+        """Remove a skill if present. Returns True if removed."""
+        skills = self.get_skills()
+        if skill_name in skills:
+            skills.remove(skill_name)
+            self.set_skills(skills)
+            return True
+        return False
     
     def to_dict(self) -> dict:
         return {
             "id": self.id,
             "name": self.name,
+            "skills": self.get_skills(),
         }
 
 
@@ -81,4 +114,50 @@ class Task(Base):
             "git_hash": self.git_hash,
             "completed_at": self.completed_at.isoformat() if self.completed_at else None,
             "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
+
+
+class Session(Base):
+    """Tracks the current working session for a task.
+    
+    Only one active session at a time. Sessions are created when a task
+    becomes in-progress and deleted when the task completes.
+    """
+    __tablename__ = "sessions"
+    
+    id: str = Column(String(6), primary_key=True, default=generate_task_id)
+    task_id: str = Column(String(6), ForeignKey("tasks.id"), unique=True, nullable=False)
+    current_mode: str = Column(String(20), default="start")
+    loaded_memories: str = Column(Text, default="[]")  # JSON array of memory names
+    created_at: datetime = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    
+    task = relationship("Task", backref="session", uselist=False)
+    
+    def get_memories(self) -> list[str]:
+        """Get loaded memories as a list."""
+        import json
+        try:
+            return json.loads(self.loaded_memories or "[]")
+        except json.JSONDecodeError:
+            return []
+    
+    def add_memory(self, memory_name: str) -> bool:
+        """Add a memory if not already loaded. Returns True if added."""
+        import json
+        memories = self.get_memories()
+        if memory_name not in memories:
+            memories.append(memory_name)
+            self.loaded_memories = json.dumps(memories)
+            return True
+        return False
+    
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "task_id": self.task_id,
+            "current_mode": self.current_mode,
+            "loaded_memories": self.get_memories(),
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
