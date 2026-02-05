@@ -3,7 +3,7 @@
 from pathlib import Path
 from typing import Any, Optional
 
-from jinja2 import Environment, BaseLoader, TemplateError
+from jinja2 import Environment, FileSystemLoader, TemplateError
 
 MODES_DIR = Path(__file__).parent
 
@@ -15,6 +15,7 @@ def get_mode(mode_name: str, context: Optional[dict[str, Any]] = None) -> str:
     
     Supports Jinja2 templating for dynamic content injection.
     Templates without Jinja syntax are returned as-is (backward compatible).
+    Supports {% include 'partials/filename.md' %} for shared content.
     
     Args:
         mode_name: Name of the mode (e.g., 'execute', 'research')
@@ -33,9 +34,9 @@ def get_mode(mode_name: str, context: Optional[dict[str, Any]] = None) -> str:
     if "{{" not in template_content and "{%" not in template_content:
         return template_content
     
-    # Render with Jinja2
+    # Render with Jinja2 using FileSystemLoader for includes
     try:
-        env = Environment(loader=BaseLoader(), autoescape=False)
+        env = Environment(loader=FileSystemLoader(str(MODES_DIR)), autoescape=False)
         template = env.from_string(template_content)
         return template.render(context or {})
     except TemplateError as e:

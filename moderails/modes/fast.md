@@ -13,11 +13,6 @@
 
 ## AVAILABLE CONTEXT
 
-{% if skills %}
-### SKILLS
-{% for s in skills %}- {{ s }}
-{% endfor %}
-{% endif %}
 ### MEMORIES
 {% if memories %}
 {% for m in memories %}- {{ m }}
