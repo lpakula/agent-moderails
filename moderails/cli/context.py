@@ -59,6 +59,40 @@ def context_list(ctx):
     click.echo("```")
 
 
+@context.command("save")
+@click.option("--name", "-n", required=True, help="Context file name (without .md extension)")
+@click.option("--mandatory", "-m", is_flag=True, help="Save as mandatory context (auto-loaded)")
+@click.option("--memory", "-M", is_flag=True, help="Save as memory (loaded on demand)")
+@click.pass_context
+def context_save(ctx, name: str, mandatory: bool, memory: bool):
+    """Create a context file for agent editing.
+    
+    Creates a markdown file in the appropriate context directory.
+    The agent should then edit this file in place to populate it.
+    """
+    if not mandatory and not memory:
+        click.echo("❌ Provide --mandatory or --memory to specify context type")
+        return
+    
+    if mandatory and memory:
+        click.echo("❌ Provide only one of --mandatory or --memory")
+        return
+    
+    services = get_services_or_exit(ctx)
+    
+    context_type = "mandatory context" if mandatory else "memory"
+    
+    # Check if file already exists before creating
+    if services["context"].context_file_exists(name, mandatory=mandatory):
+        click.echo(f"❌ {context_type.capitalize()} file '{name}' already exists")
+        return
+    
+    file_path = services["context"].save_context_file(name, mandatory=mandatory)
+    
+    click.echo(f"✅ Created {context_type} file: `{file_path}`")
+    click.echo(f"\nEdit this file in place: `{file_path}`")
+
+
 @context.command("load")
 @click.option("--mandatory", "-m", is_flag=True, help="Load mandatory context")
 @click.option("--memory", "-M", multiple=True, help="Memory name to load (can specify multiple)")

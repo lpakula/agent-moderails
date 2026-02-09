@@ -22,7 +22,7 @@ Start a task first with `moderails task create --name "Task name"` or switch to 
 
 ## PURPOSE
 
-Create executable TODO plan in the task file.
+Create executable TODO plan in the task file. **Default: one task.** Split only when the user explicitly asks.
 
 ## WORKFLOW
 
@@ -34,9 +34,11 @@ Create executable TODO plan in the task file.
 
 2. Create atomic TODO LIST items
 
-3. **Evaluate complexity**: If the plan has many phases or TODO items (5+ phases or 20+ items), suggest splitting:
+3. **Evaluate complexity** (suggestion only): If the plan has many phases or TODO items (5+ phases or 20+ items), you may tell the user they *can* split later if they want:
    
-   > "This task has many phases. Consider splitting into smaller tasks with `--split` for better tracking."
+   > "This task has many phases. If you ever want to split it into smaller tasks, say so or use `#plan --split`."
+
+   Do **not** create new tasks or split unless the user explicitly asks (e.g. "split it" or uses `--split`).
 
 4. Get user approval
 
@@ -60,10 +62,11 @@ Create executable TODO plan in the task file.
 - No code samples in task files
 - No task status update 
 - No `todo_write` or internal TODO lists
+- **No splitting the task or creating multiple tasks** unless the user explicitly requests it (e.g. "split this task" or `#plan --split`). Default is always one task.
 
-## SPLIT MODE
+## SPLIT MODE (only when user explicitly requests split)
 
-If user message contains `--split` flag:
+**Only** if the user message contains `--split` or the user clearly asks to split the task (e.g. "split it", "break into smaller tasks"):
 
 1. **Analyze the current task** and break it into logical phases (each becomes a separate task)
 

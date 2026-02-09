@@ -16,6 +16,8 @@ moderails epic update --id <epic-id> [--name "new-name"] [--add-skill <skill>] [
 # Context Management
 moderails context list                                # List available memories and files
 moderails context load --memory <name>                # Load specific memory
+moderails context save --name <name> --mandatory      # Create mandatory context file 
+moderails context save --name <name> --memory         # Create memory file 
 
 # Session
 moderails start [--rerail]                         # --rerail for instant resume

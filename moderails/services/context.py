@@ -12,7 +12,6 @@ class ContextService:
         self.mandatory_dir = self.context_dir / "mandatory"
         self.memories_dir = self.context_dir / "memories"
         self.history_file = moderails_dir / "history.jsonl"
-        # Skills directory is at project root (parent of _moderails)
         self.skills_dir = moderails_dir.parent / "skills"
     
     def load_mandatory_context(self) -> Optional[str]:
@@ -177,6 +176,37 @@ class ContextService:
         
         return "\n".join(tree_lines)
     
+    def context_file_exists(self, name: str, mandatory: bool = False) -> bool:
+        """Check if a context file already exists.
+        
+        Args:
+            name: File name (without .md extension)
+            mandatory: If True, check mandatory/ dir; otherwise check memories/
+            
+        Returns:
+            True if the file exists
+        """
+        target_dir = self.mandatory_dir if mandatory else self.memories_dir
+        return (target_dir / f"{name}.md").exists()
+
+    def save_context_file(self, name: str, mandatory: bool = False) -> Path:
+        """Create a new context file for agent editing.
+        
+        Args:
+            name: File name (without .md extension)
+            mandatory: If True, save to mandatory/ dir; otherwise save to memories/
+            
+        Returns:
+            Path to the created file
+        """
+        target_dir = self.mandatory_dir if mandatory else self.memories_dir
+        target_dir.mkdir(parents=True, exist_ok=True)
+        
+        file_path = target_dir / f"{name}.md"
+        file_path.write_text(f"# {name}\n\n")
+        
+        return file_path
+
     def ensure_directories(self) -> None:
         """Ensure context directories exist."""
         self.context_dir.mkdir(exist_ok=True)

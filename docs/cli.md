@@ -90,8 +90,15 @@ moderails epic load --id <epic-id>
 ```bash
 # List available skills, memories, and files tree
 moderails context list
+
 # Load specific memories (flags can be combined)
 moderails context load --memory auth --memory payments
+
+# Create a mandatory context file 
+moderails context save --name conventions --mandatory
+
+# Create a memory file 
+moderails context save --name auth --memory
 ```
 
 > **Note:** Mandatory context, skill names, list of available memories, and files tree are automatically injected when entering `#research` or `#fast` modes. Manual loading is only needed for additional memories.
