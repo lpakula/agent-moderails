@@ -23,6 +23,7 @@ class TaskService:
         name: str,
         epic_id: Optional[str] = None,
         summary: str = "",
+        description: str = "",
         task_type: TaskType = TaskType.FEATURE,
         status: TaskStatus = TaskStatus.IN_PROGRESS,
     ) -> Task:
@@ -34,6 +35,7 @@ class TaskService:
             name: Task name (max 50 characters)
             epic_id: Optional epic ID
             summary: Task summary
+            description: Task description (context for draft tickets, shown when loading task)
             task_type: Task type (feature, fix, refactor, chore)
             status: Initial task status (default: in-progress)
         """
@@ -65,6 +67,7 @@ class TaskService:
             name=name,
             file_name="",  # Will be set when entering #plan mode
             summary=summary,
+            description=description,
             type=task_type,
             epic_id=epic_id,
             status=status,
@@ -140,6 +143,7 @@ class TaskService:
         status: Optional[TaskStatus] = None,
         task_type: Optional[TaskType] = None,
         summary: Optional[str] = None,
+        description: Optional[str] = None,
         git_hash: Optional[str] = None,
         file_name: Optional[str] = None,
     ) -> Optional[Task]:
@@ -169,6 +173,8 @@ class TaskService:
             task.type = task_type
         if summary is not None:
             task.summary = summary
+        if description is not None:
+            task.description = description
         if git_hash:
             task.git_hash = git_hash
         if file_name is not None:

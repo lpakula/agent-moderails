@@ -3,9 +3,10 @@
 ```
 # Task Management
 moderails task list [--status <draft|in-progress|completed>]
-moderails task create --name "Task Name" [--epic <epic-id>] [--type feature|fix|refactor|chore]
+moderails task create --name "Task Name" [--description <text>] [--epic <epic-id>] [--type feature|fix|refactor|chore]
+moderails task load --id <task-id>                # Show task details and description (context)
 moderails task complete --id <task-id> --commit-message "..."
-moderails task update --id <task-id> [--name <name>] [--status <status>] [--type <type>] [--summary <text>]
+moderails task update --id <task-id> [--name <name>] [--status <status>] [--type <type>] [--summary <text>] [--description <text>]
 
 # Epic Management
 moderails epic list

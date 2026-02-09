@@ -87,6 +87,7 @@ class Task(Base):
     name: str = Column(String(255), nullable=False)
     file_name: str = Column(String(255), nullable=False)
     summary: str = Column(Text, default="")
+    description: str = Column(Text, default="")
     type: TaskType = Column(SQLEnum(TaskType), default=TaskType.FEATURE)
     status: TaskStatus = Column(SQLEnum(TaskStatus), default=TaskStatus.DRAFT)
     git_hash: str = Column(String(40), default="")
@@ -107,6 +108,7 @@ class Task(Base):
             "name": self.name,
             "file_name": self.file_name,
             "summary": self.summary,
+            "description": self.description,
             "type": self.type.value,
             "status": self.status.value,
             "epic": self.epic.name if self.epic else None,

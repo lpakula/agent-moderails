@@ -59,7 +59,7 @@ Ask user: "Continue with this task, or remove existing task and start something 
 {% else -%}
 4. Create epic with relevant skills: `moderails epic create --name "epic-name" [--skills <skill1> --skills <skill2>]`
 {% endif -%}
-5. Create task: `moderails task create --name "Task name" [--type feature|fix|refactor|chore] [--epic <epic-id>]`
+5. Create task: `moderails task create --name "Task name" [--description "<context>"] [--type feature|fix|refactor|chore] [--epic <epic-id>]` (use --description for draft context)
 6. Advise user to type `#research` to begin analysis
 {% endif %}
 

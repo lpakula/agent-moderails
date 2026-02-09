@@ -43,6 +43,10 @@ MIGRATIONS = {
             FOREIGN KEY (task_id) REFERENCES tasks(id)
         );
     """,
+    4: """
+        -- Add description column to tasks (context for draft tickets)
+        ALTER TABLE tasks ADD COLUMN description TEXT DEFAULT '';
+    """,
 }
 
 CURRENT_VERSION = max(MIGRATIONS.keys())
@@ -125,10 +129,13 @@ def run_migration(db_path: Path, version: int) -> None:
             # Handle migration 2 specially - check if column exists first
             if version == 2:
                 if column_exists(conn, "epics", "skills"):
-                    # Column already exists, skip this migration
                     conn.commit()
                     return
-            
+            if version == 4:
+                if column_exists(conn, "tasks", "description"):
+                    conn.commit()
+                    return
+
             # Split migration into separate statements (SQLite limitation)
             migration_sql = MIGRATIONS[version]
             statements = [s.strip() for s in migration_sql.split(';') if s.strip()]

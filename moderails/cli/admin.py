@@ -167,14 +167,12 @@ def register_admin_commands(cli):
             click.echo("No tasks found.")
             return
         
-        # Sort: non-completed tasks first (newest at top), then completed tasks at bottom (newest at top)
-        sorted_tasks = sorted(
-            tasks,
-            key=lambda x: (
-                x.status == TaskStatus.COMPLETED,  # False (0) first, True (1) last
-                -(x.completed_at if (x.status == TaskStatus.COMPLETED and x.completed_at) else x.created_at).timestamp()
-            )
-        )
+        # Sort: completed first (top), then draft, then in-progress last (bottom, visible without scrolling)
+        def _list_sort_key(x):
+            ts = x.completed_at if (x.status == TaskStatus.COMPLETED and x.completed_at) else x.created_at
+            rank = (0 if x.status == TaskStatus.COMPLETED else 1 if x.status == TaskStatus.DRAFT else 2)
+            return (rank, -ts.timestamp())
+        sorted_tasks = sorted(tasks, key=_list_sort_key)
         
         # Display: task_id [type] [status] [epic] [timestamp] - task name
         for task in sorted_tasks:

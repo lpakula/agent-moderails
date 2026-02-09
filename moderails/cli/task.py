@@ -21,11 +21,12 @@ def task(ctx):
 
 @task.command("create")
 @click.option("--name", "-n", required=True, help="Task name")
+@click.option("--description", "-d", help="Task description (context for draft tickets)")
 @click.option("--epic", "-e", help="Epic ID (6-character, optional)")
 @click.option("--type", "-t", type=click.Choice(["feature", "fix", "refactor", "chore"]), default="feature", help="Task type (default: feature)")
 @click.option("--status", "-s", type=click.Choice(["draft", "in-progress"]), default="in-progress", help="Initial task status (default: in-progress)")
 @click.pass_context
-def task_create(ctx, name: str, epic: Optional[str], type: str, status: str):
+def task_create(ctx, name: str, description: Optional[str], epic: Optional[str], type: str, status: str):
     """Create a new task. Plan file is created when entering #plan mode."""
     services = get_services_or_exit(ctx)
     
@@ -41,9 +42,10 @@ def task_create(ctx, name: str, epic: Optional[str], type: str, status: str):
         task_type = TaskType(type)
         task_status = TaskStatus(status)
         task = services["task"].create(
-            name=name, 
-            epic_id=epic if epic else None, 
-            task_type=task_type, 
+            name=name,
+            description=description or "",
+            epic_id=epic if epic else None,
+            task_type=task_type,
             status=task_status,
         )
         
@@ -69,16 +71,17 @@ def task_create(ctx, name: str, epic: Optional[str], type: str, status: str):
 @click.option("--status", "-s", type=click.Choice(["draft", "in-progress", "completed"]))
 @click.option("--type", type=click.Choice(["feature", "fix", "refactor", "chore"]), help="New task type")
 @click.option("--summary", help="Task summary")
+@click.option("--description", "-d", help="Task description (context for draft tickets)")
 @click.option("--git-hash", help="Git commit hash")
 @click.option("--file-name", help="Task file name (e.g., my-task.md)")
 @click.pass_context
-def task_update(ctx, task_id: str, name: Optional[str], status: Optional[str], type: Optional[str], summary: Optional[str], git_hash: Optional[str], file_name: Optional[str]):
-    """Update task name, status, type, summary, git hash, or file name."""
+def task_update(ctx, task_id: str, name: Optional[str], status: Optional[str], type: Optional[str], summary: Optional[str], description: Optional[str], git_hash: Optional[str], file_name: Optional[str]):
+    """Update task name, status, type, summary, description, git hash, or file name."""
     services = get_services_or_exit(ctx)
     
     status_enum = TaskStatus(status) if status else None
     type_enum = TaskType(type) if type else None
-    t = services["task"].update(task_id, name=name, status=status_enum, task_type=type_enum, summary=summary, git_hash=git_hash, file_name=file_name)
+    t = services["task"].update(task_id, name=name, status=status_enum, task_type=type_enum, summary=summary, description=description, git_hash=git_hash, file_name=file_name)
     
     if not t:
         click.echo(f"❌ Task '{task_id}' not found")
@@ -287,6 +290,8 @@ def task_load(ctx, task_id: str):
         click.echo(f"**File**: _moderails/{task.file_name}")
     if task.summary:
         click.echo(f"**Summary**: {task.summary}")
+    if task.description:
+        click.echo(f"**Description**: {task.description}")
     click.echo()
     
     # Load task file content

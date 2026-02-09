@@ -5,7 +5,7 @@ import click
 from .. import __version__
 from ..utils import create_command_files
 from .admin import register_admin_commands
-from .common import get_services
+from .common import check_and_migrate, get_services
 from .context import context
 from .epic import epic
 from .task import task
@@ -19,8 +19,9 @@ def cli(ctx):
     ctx.ensure_object(dict)
     ctx.obj["db_path"] = None
     
-    # Auto-sync history and update command files on startup (if DB exists)
+    # Run migrations first (before any ORM access), then sync history and command files
     try:
+        check_and_migrate()
         services = get_services(ctx.obj.get("db_path"))
         
         # Sync history
