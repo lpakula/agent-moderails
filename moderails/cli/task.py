@@ -21,7 +21,7 @@ def task(ctx):
 
 @task.command("create")
 @click.option("--name", "-n", required=True, help="Task name")
-@click.option("--description", "-d", help="Task description (context for draft tickets)")
+@click.option("--description", "-d", help="Task description, max 500 chars (short context)")
 @click.option("--epic", "-e", help="Epic ID (6-character, optional)")
 @click.option("--type", "-t", type=click.Choice(["feature", "fix", "refactor", "chore"]), default="feature", help="Task type (default: feature)")
 @click.option("--status", "-s", type=click.Choice(["draft", "in-progress"]), default="in-progress", help="Initial task status (default: in-progress)")
@@ -71,7 +71,7 @@ def task_create(ctx, name: str, description: Optional[str], epic: Optional[str],
 @click.option("--status", "-s", type=click.Choice(["draft", "in-progress", "completed"]))
 @click.option("--type", type=click.Choice(["feature", "fix", "refactor", "chore"]), help="New task type")
 @click.option("--summary", help="Task summary")
-@click.option("--description", "-d", help="Task description (context for draft tickets)")
+@click.option("--description", "-d", help="Task description, max 500 chars (short context)")
 @click.option("--git-hash", help="Git commit hash")
 @click.option("--file-name", help="Task file name (e.g., my-task.md)")
 @click.pass_context

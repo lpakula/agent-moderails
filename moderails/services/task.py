@@ -9,6 +9,8 @@ from sqlalchemy.orm import Session
 from ..db.models import Epic, Task, TaskStatus, TaskType
 from ..modes import get_task_template
 
+DESCRIPTION_MAX_LENGTH = 500
+
 
 class TaskService:
     def __init__(self, session: Session, moderails_dir: Path):
@@ -43,6 +45,10 @@ class TaskService:
         # Validate task name length
         if len(name) > 50:
             raise ValueError(f"Task name must be 50 characters or less (got {len(name)})")
+        if description and len(description) > DESCRIPTION_MAX_LENGTH:
+            raise ValueError(
+                f"Task description must be {DESCRIPTION_MAX_LENGTH} characters or less (got {len(description)})"
+            )
         
         # Enforce single in-progress task when creating as in-progress
         if status == TaskStatus.IN_PROGRESS:
@@ -174,6 +180,10 @@ class TaskService:
         if summary is not None:
             task.summary = summary
         if description is not None:
+            if len(description) > DESCRIPTION_MAX_LENGTH:
+                raise ValueError(
+                    f"Task description must be {DESCRIPTION_MAX_LENGTH} characters or less (got {len(description)})"
+                )
             task.description = description
         if git_hash:
             task.git_hash = git_hash
