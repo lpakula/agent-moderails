@@ -70,18 +70,36 @@ def task_create(ctx, name: str, description: Optional[str], epic: Optional[str],
 @click.option("--name", help="New task name")
 @click.option("--status", "-s", type=click.Choice(["draft", "in-progress", "completed"]))
 @click.option("--type", type=click.Choice(["feature", "fix", "refactor", "chore"]), help="New task type")
+@click.option("--epic", "-e", "epic_id", default=None, help="Epic ID to assign (use 'none' to unassign)")
 @click.option("--summary", help="Task summary")
 @click.option("--description", "-d", help="Task description, max 500 chars (short context)")
 @click.option("--git-hash", help="Git commit hash")
 @click.option("--file-name", help="Task file name (e.g., my-task.md)")
 @click.pass_context
-def task_update(ctx, task_id: str, name: Optional[str], status: Optional[str], type: Optional[str], summary: Optional[str], description: Optional[str], git_hash: Optional[str], file_name: Optional[str]):
-    """Update task name, status, type, summary, description, git hash, or file name."""
+def task_update(ctx, task_id: str, name: Optional[str], status: Optional[str], type: Optional[str], epic_id: Optional[str], summary: Optional[str], description: Optional[str], git_hash: Optional[str], file_name: Optional[str]):
+    """Update task name, status, type, epic, summary, description, git hash, or file name."""
     services = get_services_or_exit(ctx)
+    
+    # Handle epic: "none" means unassign, None means don't change
+    epic_kwarg = "__unset__"
+    if epic_id is not None:
+        if epic_id.lower() == "none":
+            epic_kwarg = None
+        else:
+            epic_obj = services["epic"].get(epic_id)
+            if not epic_obj:
+                click.echo(f"❌ Epic '{epic_id}' not found")
+                return
+            epic_kwarg = epic_id
     
     status_enum = TaskStatus(status) if status else None
     type_enum = TaskType(type) if type else None
-    t = services["task"].update(task_id, name=name, status=status_enum, task_type=type_enum, summary=summary, description=description, git_hash=git_hash, file_name=file_name)
+    
+    try:
+        t = services["task"].update(task_id, name=name, status=status_enum, task_type=type_enum, summary=summary, description=description, git_hash=git_hash, file_name=file_name, epic_id=epic_kwarg)
+    except ValueError as e:
+        click.echo(f"❌ Error: {e}")
+        return
     
     if not t:
         click.echo(f"❌ Task '{task_id}' not found")
@@ -92,6 +110,12 @@ def task_update(ctx, task_id: str, name: Optional[str], status: Optional[str], t
         services["session"].ensure_active(task_id)
     
     click.echo(f"✅ Updated task: {t.id} - {t.name} [{t.type.value}] [{t.status.value}]")
+    if epic_kwarg == "__unset__":
+        pass  # Epic not changed
+    elif epic_kwarg is None:
+        click.echo("   Epic: (unassigned)")
+    else:
+        click.echo(f"   Epic: {t.epic_id}")
     
     if status == "completed":
         click.echo("\n💡 Now commit your changes with a descriptive message")

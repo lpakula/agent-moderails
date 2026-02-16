@@ -152,6 +152,7 @@ class TaskService:
         description: Optional[str] = None,
         git_hash: Optional[str] = None,
         file_name: Optional[str] = None,
+        epic_id: Optional[str] = "__unset__",
     ) -> Optional[Task]:
         task = self.get(task_id)
         if not task:
@@ -189,6 +190,12 @@ class TaskService:
             task.git_hash = git_hash
         if file_name is not None:
             task.file_name = file_name
+        if epic_id != "__unset__":
+            if epic_id is not None:
+                epic = self.session.query(Epic).filter(Epic.id == epic_id).first()
+                if not epic:
+                    raise ValueError(f"Epic with ID '{epic_id}' not found")
+            task.epic_id = epic_id
         
         self.session.commit()
         self.session.refresh(task)
