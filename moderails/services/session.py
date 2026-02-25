@@ -41,13 +41,15 @@ class SessionService:
     def ensure_active(self, task_id: str) -> Session:
         """Ensure a session exists for the given task, creating if needed.
         
+        Only one global session is allowed. Any existing session for a
+        different task is deleted before creating the new one.
+        
         Args:
             task_id: The task ID to create/get session for
             
         Returns:
             The session (existing or newly created)
         """
-        # Check if session already exists
         existing = self.db_session.query(Session).filter(
             Session.task_id == task_id
         ).first()
@@ -55,7 +57,13 @@ class SessionService:
         if existing:
             return existing
         
-        # Create new session
+        # Delete any stale sessions for other tasks
+        stale_sessions = self.db_session.query(Session).filter(
+            Session.task_id != task_id
+        ).all()
+        for s in stale_sessions:
+            self.db_session.delete(s)
+        
         session = Session(task_id=task_id, current_mode="start")
         self.db_session.add(session)
         self.db_session.commit()

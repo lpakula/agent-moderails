@@ -6,7 +6,7 @@ from typing import Optional
 
 from sqlalchemy.orm import Session
 
-from ..db.models import Epic, Task, TaskStatus, TaskType
+from ..db.models import Epic, Session as SessionModel, Task, TaskStatus, TaskType
 from ..modes import get_task_template
 
 DESCRIPTION_MAX_LENGTH = 500
@@ -213,8 +213,11 @@ class TaskService:
                 task_file.unlink()
         
         # Delete associated session first to avoid FK constraint violation
-        if task.session:
-            self.session.delete(task.session)
+        task_session = self.session.query(SessionModel).filter(
+            SessionModel.task_id == task_id
+        ).first()
+        if task_session:
+            self.session.delete(task_session)
         
         self.session.delete(task)
         self.session.commit()
