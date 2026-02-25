@@ -212,6 +212,10 @@ class TaskService:
             if task_file.exists():
                 task_file.unlink()
         
+        # Delete associated session first to avoid FK constraint violation
+        if task.session:
+            self.session.delete(task.session)
+        
         self.session.delete(task)
         self.session.commit()
         return True
