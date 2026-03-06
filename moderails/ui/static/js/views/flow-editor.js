@@ -7,9 +7,9 @@ function flowEditorView() {
     editingMeta: false,
     metaForm: { name: '', description: '' },
     editingStep: null,
-    stepForm: { name: '', content: '' },
+    stepForm: { name: '', content: '', gates: [] },
     showAddStep: false,
-    newStep: { name: '', content: '', position: null },
+    newStep: { name: '', content: '', position: null, gates: [] },
     _sortable: null,
 
     async init() {
@@ -69,30 +69,43 @@ function flowEditorView() {
 
     startEditStep(step) {
       this.editingStep = step.id;
-      this.stepForm = { name: step.name, content: step.content || '' };
+      const gates = (step.gates || []).map(g => ({ ...g }));
+      this.stepForm = { name: step.name, content: step.content || '', gates };
     },
 
     cancelEditStep() {
       this.editingStep = null;
-      this.stepForm = { name: '', content: '' };
+      this.stepForm = { name: '', content: '', gates: [] };
+    },
+
+    addGate(form) {
+      form.gates.push({ command: '', label: '' });
+    },
+
+    removeGate(form, index) {
+      form.gates.splice(index, 1);
     },
 
     async saveStep(stepId) {
+      const gates = this.stepForm.gates.filter(g => g.command.trim());
       await API.patch(`/api/flows/${this.flow.id}/steps/${stepId}`, {
         name: this.stepForm.name,
         content: this.stepForm.content,
+        gates,
       });
       this.editingStep = null;
       await this.load(this.flow.id);
     },
 
     async addStep() {
+      const gates = this.newStep.gates.filter(g => g.command.trim());
       const body = { name: this.newStep.name, content: this.newStep.content };
+      if (gates.length) body.gates = gates;
       if (this.newStep.position !== null && this.newStep.position !== '') {
         body.position = parseInt(this.newStep.position);
       }
       await API.post(`/api/flows/${this.flow.id}/steps`, body);
-      this.newStep = { name: '', content: '', position: null };
+      this.newStep = { name: '', content: '', position: null, gates: [] };
       this.showAddStep = false;
       await this.load(this.flow.id);
     },

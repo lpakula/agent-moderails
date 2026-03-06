@@ -746,6 +746,9 @@
                       <span class="text-xs text-gray-500 w-6" x-text="si + 1"></span>
                       <span class="font-medium text-cyan-400" x-text="step.name"></span>
                       <span class="flex-1 text-xs text-gray-500 truncate" x-text="(step.content || '').slice(0, 80).replace(/\n/g, ' ')"></span>
+                      <template x-if="step.gates && step.gates.length">
+                        <span class="text-xs bg-amber-900/50 text-amber-400 border border-amber-800 px-1.5 py-0.5 rounded" x-text="step.gates.length + ' gate' + (step.gates.length > 1 ? 's' : '')"></span>
+                      </template>
                       <button @click="startEditStep(step)" class="text-xs text-blue-400 hover:text-blue-300">Edit</button>
                       <button @click="removeStep(step.id)" class="text-xs text-red-400 hover:text-red-300">Remove</button>
                     </div>
@@ -760,6 +763,23 @@
                         <label class="block text-xs text-gray-500 mb-1">Content (Markdown)</label>
                         <textarea x-model="stepForm.content" rows="12"
                                   class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+                      </div>
+                      <div>
+                        <div class="flex items-center gap-2 mb-2">
+                          <label class="block text-xs text-gray-500">Gates</label>
+                          <span class="text-xs text-gray-600">Shell commands that must exit 0 before advancing</span>
+                        </div>
+                        <template x-for="(gate, gi) in stepForm.gates" :key="gi">
+                          <div class="flex gap-2 mb-2">
+                            <input x-model="gate.command" placeholder="command, e.g. test -f output.txt"
+                                   class="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-amber-500">
+                            <input x-model="gate.label" placeholder="label (optional)"
+                                   class="w-48 bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-amber-500">
+                            <button type="button" @click="removeGate(stepForm, gi)" class="text-xs text-red-400 hover:text-red-300 px-1">&times;</button>
+                          </div>
+                        </template>
+                        <button type="button" @click="addGate(stepForm)" class="text-xs text-amber-400 hover:text-amber-300">+ Add gate</button>
+                        <p class="text-xs text-gray-600 mt-2">Variables: <code class="text-amber-500/70">{{run.id}}</code> <code class="text-amber-500/70">{{task.id}}</code> <code class="text-amber-500/70">{{flow.name}}</code></p>
                       </div>
                       <div class="flex gap-2">
                         <button @click="saveStep(step.id)" class="text-xs px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg">Save</button>
@@ -799,6 +819,23 @@
                       <textarea x-model="newStep.content" rows="8"
                                 class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 placeholder="# Step Name\n\n## PURPOSE\n..."></textarea>
+                    </div>
+                    <div>
+                      <div class="flex items-center gap-2 mb-2">
+                        <label class="block text-sm text-gray-400">Gates</label>
+                        <span class="text-xs text-gray-600">optional</span>
+                      </div>
+                      <template x-for="(gate, gi) in newStep.gates" :key="gi">
+                        <div class="flex gap-2 mb-2">
+                          <input x-model="gate.command" placeholder="command"
+                                 class="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-amber-500">
+                          <input x-model="gate.label" placeholder="label"
+                                 class="w-40 bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-amber-500">
+                          <button type="button" @click="removeGate(newStep, gi)" class="text-xs text-red-400 hover:text-red-300 px-1">&times;</button>
+                        </div>
+                      </template>
+                      <button type="button" @click="addGate(newStep)" class="text-xs text-amber-400 hover:text-amber-300">+ Add gate</button>
+                      <p class="text-xs text-gray-600 mt-2">Variables: <code class="text-amber-500/70">{{run.id}}</code> <code class="text-amber-500/70">{{task.id}}</code> <code class="text-amber-500/70">{{flow.name}}</code></p>
                     </div>
                   </div>
                   <div class="flex justify-end gap-3 mt-6">

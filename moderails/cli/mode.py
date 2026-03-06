@@ -6,6 +6,7 @@ from ..config import get_repo_root
 from ..db.database import get_session, init_db
 from ..services.context import ContextService
 from ..services.flow import FlowService
+from ..services.gate import evaluate_gates
 from ..services.run import RunService
 
 
@@ -63,6 +64,32 @@ def mode_next():
             click.echo(f"Flow '{flow_name}' not found or has no steps.", err=True)
             raise SystemExit(1)
 
+        # Gate enforcement: check current step's gates before advancing
+        if current and current != "complete":
+            step_obj = flow_svc.get_step_obj(flow_name, current)
+            if step_obj:
+                gates = step_obj.get_gates()
+                if gates:
+                    gate_vars = {
+                        "run.id": run.id,
+                        "task.id": run.task_id,
+                        "flow.name": flow_name,
+                    }
+                    failures = evaluate_gates(gates, repo_root, variables=gate_vars)
+                    if failures:
+                        click.echo("Gate check failed. Fix these before advancing:\n", err=True)
+                        for f in failures:
+                            click.echo(f"  ✗ {f['label']}", err=True)
+                            if f.get("stderr"):
+                                for line in f["stderr"].splitlines()[:3]:
+                                    click.echo(f"    {line}", err=True)
+                        click.echo(
+                            "\nComplete the requirements, then run "
+                            "`moderails mode next` again.",
+                            err=True,
+                        )
+                        raise SystemExit(1)
+
         if not current:
             next_step = steps[0]
         elif current == "complete":
@@ -90,10 +117,16 @@ def mode_next():
         # Persist next step to DB
         run_svc.update_step(task_id or run.task_id, next_step)
 
+        step_vars = {
+            "run.id": run.id,
+            "task.id": run.task_id,
+            "flow.name": flow_name,
+        }
+
         if next_step == "complete":
             content = context_svc.load_complete_step()
         else:
-            content = flow_svc.get_step_content(flow_name, next_step)
+            content = flow_svc.get_step_content(flow_name, next_step, variables=step_vars)
 
         if not content:
             click.echo(f"No content found for step '{next_step}'.", err=True)
@@ -144,10 +177,16 @@ def mode_current():
             click.echo("No current step. Run 'moderails mode next' to start.", err=True)
             raise SystemExit(1)
 
+        step_vars = {
+            "run.id": run.id,
+            "task.id": run.task_id,
+            "flow.name": flow_name,
+        }
+
         if current == "complete":
             content = context_svc.load_complete_step()
         else:
-            content = flow_svc.get_step_content(flow_name, current)
+            content = flow_svc.get_step_content(flow_name, current, variables=step_vars)
 
         if not content:
             click.echo(f"No content found for step '{current}'.", err=True)

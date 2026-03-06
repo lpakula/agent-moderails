@@ -54,12 +54,14 @@ class StepCreate(BaseModel):
     name: str
     content: str = ""
     position: Optional[int] = None
+    gates: Optional[list[dict]] = None
 
 
 class StepUpdate(BaseModel):
     name: Optional[str] = None
     content: Optional[str] = None
     position: Optional[int] = None
+    gates: Optional[list[dict]] = None
 
 
 class ReorderSteps(BaseModel):
@@ -552,7 +554,9 @@ async def add_flow_step(flow_id: str, body: StepCreate):
     session, _, _ = _get_services()
     try:
         flow_svc = FlowService(session)
-        step = flow_svc.add_step(flow_id, body.name, body.content, body.position)
+        step = flow_svc.add_step(
+            flow_id, body.name, body.content, body.position, gates=body.gates,
+        )
         if not step:
             raise HTTPException(status_code=404, detail="Flow not found")
         return step.to_dict()
@@ -572,6 +576,9 @@ async def update_flow_step(flow_id: str, step_id: str, body: StepUpdate):
             updates["content"] = body.content
         if body.position is not None:
             updates["position"] = body.position
+        if body.gates is not None:
+            import json
+            updates["gates"] = json.dumps(body.gates)
         step = flow_svc.update_step(step_id, **updates)
         if not step:
             raise HTTPException(status_code=404, detail="Step not found")
@@ -629,7 +636,6 @@ async def import_flows(file: UploadFile = File(...)):
         raise HTTPException(status_code=400, detail="Invalid JSON")
     finally:
         session.close()
-
 
 
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")

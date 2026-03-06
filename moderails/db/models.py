@@ -106,11 +106,20 @@ class FlowStep(Base):
     name: str = Column(String(255), nullable=False)
     position: int = Column(Integer, nullable=False, default=0)
     content: str = Column(Text, default="")
+    gates: str = Column(Text, default="[]")
     created_at: datetime = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Column(DateTime, default=lambda: datetime.now(timezone.utc),
                                   onupdate=lambda: datetime.now(timezone.utc))
 
     flow = relationship("Flow", back_populates="steps")
+
+    def get_gates(self) -> list[dict]:
+        """Parse gates JSON into a list of gate dicts."""
+        import json
+        try:
+            return json.loads(self.gates or "[]")
+        except (json.JSONDecodeError, TypeError):
+            return []
 
     def to_dict(self) -> dict:
         return {
@@ -119,6 +128,7 @@ class FlowStep(Base):
             "name": self.name,
             "position": self.position,
             "content": self.content,
+            "gates": self.get_gates(),
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }

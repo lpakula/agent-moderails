@@ -6,6 +6,7 @@ from pathlib import Path
 
 from moderails.db.models import Flow, FlowStep, Task, TaskRun, TaskType
 from moderails.services.flow import FlowService
+from moderails.services.gate import evaluate_gates
 from moderails.services.project import ProjectService
 from moderails.services.run import RunService
 from moderails.services.task import TaskService
@@ -192,7 +193,8 @@ class TestFlowService:
             {"name": "research", "content": "# Do Research"},
         ])
         content = svc.get_step_content("content-test", "research")
-        assert content == "# Do Research"
+        assert content.startswith("# Do Research")
+        assert "moderails mode next" in content
 
     def test_get_step_content_not_found(self, test_db):
         svc = FlowService(test_db)
@@ -276,6 +278,202 @@ class TestFlowService:
         assert len(reimported.steps) == 2
 
         path.unlink()
+
+
+    def test_create_flow_with_gates(self, test_db):
+        svc = FlowService(test_db)
+        flow = svc.create("gated-flow", steps=[
+            {
+                "name": "execute",
+                "position": 0,
+                "content": "# Execute",
+                "gates": [
+                    {"command": "test -f output.txt", "label": "Output file exists"},
+                ],
+            },
+            {"name": "commit", "position": 1, "content": "# Commit"},
+        ])
+        assert len(flow.steps) == 2
+        assert flow.steps[0].get_gates() == [
+            {"command": "test -f output.txt", "label": "Output file exists"},
+        ]
+        assert flow.steps[1].get_gates() == []
+
+    def test_add_step_with_gates(self, test_db):
+        svc = FlowService(test_db)
+        flow = svc.create("add-gated")
+        step = svc.add_step(
+            flow.id, "test", "# Test",
+            gates=[{"command": "npm test", "label": "Tests pass"}],
+        )
+        assert step.get_gates() == [{"command": "npm test", "label": "Tests pass"}]
+
+    def test_get_step_obj(self, test_db):
+        svc = FlowService(test_db)
+        svc.create("obj-test", steps=[
+            {"name": "step1", "position": 0, "content": "# Step 1"},
+        ])
+        step = svc.get_step_obj("obj-test", "step1")
+        assert step is not None
+        assert step.name == "step1"
+        assert svc.get_step_obj("obj-test", "nonexistent") is None
+
+    def test_step_content_includes_gate_info(self, test_db):
+        svc = FlowService(test_db)
+        svc.create("gate-content", steps=[
+            {
+                "name": "build",
+                "position": 0,
+                "content": "# Build",
+                "gates": [{"command": "make build", "label": "Build succeeds"}],
+            },
+        ])
+        content = svc.get_step_content("gate-content", "build")
+        assert "GATES" in content
+        assert "make build" in content
+        assert "Build succeeds" in content
+
+    def test_step_content_no_gate_section_when_empty(self, test_db):
+        svc = FlowService(test_db)
+        svc.create("no-gates", steps=[
+            {"name": "step1", "position": 0, "content": "# Step"},
+        ])
+        content = svc.get_step_content("no-gates", "step1")
+        assert "GATES" not in content
+
+    def test_duplicate_preserves_gates(self, test_db):
+        svc = FlowService(test_db)
+        svc.create("src-gates", steps=[
+            {
+                "name": "test",
+                "position": 0,
+                "content": "# Test",
+                "gates": [{"command": "pytest", "label": "Tests pass"}],
+            },
+        ])
+        copy = svc.duplicate("src-gates", "dst-gates")
+        assert copy.steps[0].get_gates() == [{"command": "pytest", "label": "Tests pass"}]
+
+    def test_export_import_gates_round_trip(self, test_db):
+        svc = FlowService(test_db)
+        gates = [{"command": "ls *.png", "label": "Screenshots exist"}]
+        svc.create("gate-export", steps=[
+            {"name": "test", "position": 0, "content": "# Test", "gates": gates},
+        ])
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+            path = Path(f.name)
+
+        svc.export_flows(path)
+        data = json.loads(path.read_text())
+        exported_gates = data["flows"][0]["steps"][0].get("gates", [])
+        assert exported_gates == gates
+
+        for step in list(svc.get_by_name("gate-export").steps):
+            test_db.delete(step)
+        test_db.delete(svc.get_by_name("gate-export"))
+        test_db.commit()
+
+        svc.import_flows(path)
+        reimported = svc.get_by_name("gate-export")
+        assert reimported.steps[0].get_gates() == gates
+        path.unlink()
+
+
+class TestGateEvaluation:
+    def test_passing_gate(self, temp_dir):
+        gates = [{"command": "true", "label": "Always passes"}]
+        failures = evaluate_gates(gates, temp_dir)
+        assert failures == []
+
+    def test_failing_gate(self, temp_dir):
+        gates = [{"command": "false", "label": "Always fails"}]
+        failures = evaluate_gates(gates, temp_dir)
+        assert len(failures) == 1
+        assert failures[0]["label"] == "Always fails"
+        assert failures[0]["exit_code"] != 0
+
+    def test_multiple_gates_all_pass(self, temp_dir):
+        (temp_dir / "hello.txt").write_text("hi")
+        gates = [
+            {"command": "true", "label": "First"},
+            {"command": "test -f hello.txt", "label": "File exists"},
+        ]
+        failures = evaluate_gates(gates, temp_dir)
+        assert failures == []
+
+    def test_multiple_gates_partial_failure(self, temp_dir):
+        gates = [
+            {"command": "true", "label": "Passes"},
+            {"command": "test -f nonexistent.txt", "label": "Missing file"},
+        ]
+        failures = evaluate_gates(gates, temp_dir)
+        assert len(failures) == 1
+        assert failures[0]["label"] == "Missing file"
+
+    def test_file_exists_gate(self, temp_dir):
+        gates = [{"command": "test -f output.txt", "label": "Output exists"}]
+        failures = evaluate_gates(gates, temp_dir)
+        assert len(failures) == 1
+
+        (temp_dir / "output.txt").write_text("data")
+        failures = evaluate_gates(gates, temp_dir)
+        assert failures == []
+
+    def test_glob_gate(self, temp_dir):
+        gates = [{"command": "ls *.png 2>/dev/null | grep -q .", "label": "PNG files exist"}]
+        failures = evaluate_gates(gates, temp_dir)
+        assert len(failures) == 1
+
+        (temp_dir / "screenshot.png").write_text("fake png")
+        failures = evaluate_gates(gates, temp_dir)
+        assert failures == []
+
+    def test_gate_timeout(self, temp_dir):
+        gates = [{"command": "sleep 10", "label": "Slow command"}]
+        failures = evaluate_gates(gates, temp_dir, timeout=1)
+        assert len(failures) == 1
+        assert "Timed out" in failures[0]["stderr"]
+
+    def test_empty_gates(self, temp_dir):
+        assert evaluate_gates([], temp_dir) == []
+
+    def test_gate_stderr_captured(self, temp_dir):
+        gates = [{"command": "echo 'bad thing' >&2 && false", "label": "Fails with stderr"}]
+        failures = evaluate_gates(gates, temp_dir)
+        assert len(failures) == 1
+        assert "bad thing" in failures[0]["stderr"]
+
+    def test_gate_without_label_uses_command(self, temp_dir):
+        gates = [{"command": "false"}]
+        failures = evaluate_gates(gates, temp_dir)
+        assert failures[0]["label"] == "false"
+
+    def test_gate_interpolation(self, temp_dir):
+        run_dir = temp_dir / "abc123"
+        run_dir.mkdir()
+        (run_dir / "screenshot.png").write_text("fake")
+        gates = [
+            {"command": "ls {{run.id}}/*.png | grep -q .", "label": "Screenshots in {{run.id}}/"},
+        ]
+        variables = {"run.id": "abc123", "task.id": "t001", "flow.name": "react-js"}
+        failures = evaluate_gates(gates, temp_dir, variables=variables)
+        assert failures == []
+
+    def test_gate_interpolation_missing_var_preserved(self, temp_dir):
+        gates = [{"command": "echo {{unknown.var}}", "label": "test"}]
+        failures = evaluate_gates(gates, temp_dir, variables={"run.id": "x"})
+        assert failures == []
+
+    def test_gate_runs_in_cwd(self, temp_dir):
+        subdir = temp_dir / "sub"
+        subdir.mkdir()
+        (subdir / "marker.txt").write_text("here")
+        gates = [{"command": "test -f marker.txt", "label": "Marker exists"}]
+        failures = evaluate_gates(gates, subdir)
+        assert failures == []
+        failures = evaluate_gates(gates, temp_dir)
+        assert len(failures) == 1
 
 
 class TestRunService:

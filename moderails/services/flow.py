@@ -12,6 +12,15 @@ from ..db.models import Flow, FlowStep
 from ..defaults import get_defaults_dir
 
 
+def _serialize_gates(gates) -> str:
+    """Normalize gates to a JSON string for storage."""
+    if gates is None:
+        return "[]"
+    if isinstance(gates, str):
+        return gates
+    return json.dumps(gates)
+
+
 class FlowService:
     def __init__(self, session: Session):
         self.session = session
@@ -37,6 +46,7 @@ class FlowService:
                     name=step_data["name"],
                     position=step_data.get("position", i),
                     content=step_data.get("content", ""),
+                    gates=_serialize_gates(step_data.get("gates")),
                 )
                 self.session.add(step)
 
@@ -77,7 +87,8 @@ class FlowService:
         return True
 
     def add_step(
-        self, flow_id: str, name: str, content: str = "", position: Optional[int] = None,
+        self, flow_id: str, name: str, content: str = "",
+        position: Optional[int] = None, gates: Optional[list] = None,
     ) -> Optional[FlowStep]:
         flow = self.get(flow_id)
         if not flow:
@@ -87,7 +98,10 @@ class FlowService:
             max_pos = max((s.position for s in flow.steps), default=-1)
             position = max_pos + 1
 
-        step = FlowStep(flow_id=flow_id, name=name, position=position, content=content)
+        step = FlowStep(
+            flow_id=flow_id, name=name, position=position,
+            content=content, gates=_serialize_gates(gates),
+        )
         self.session.add(step)
         flow.updated_at = datetime.now(timezone.utc)
         self.session.commit()
@@ -137,14 +151,41 @@ class FlowService:
         "---"
     )
 
-    def get_step_content(self, flow_name: str, step_name: str) -> Optional[str]:
+    def get_step_obj(self, flow_name: str, step_name: str) -> Optional[FlowStep]:
         flow = self.get_by_name(flow_name)
         if not flow:
             return None
         for step in flow.steps:
             if step.name == step_name:
-                return (step.content or "").rstrip() + self.STEP_FOOTER
+                return step
         return None
+
+    def get_step_content(
+        self, flow_name: str, step_name: str,
+        variables: Optional[dict] = None,
+    ) -> Optional[str]:
+        from .gate import _interpolate
+
+        step = self.get_step_obj(flow_name, step_name)
+        if not step:
+            return None
+        content = (step.content or "").rstrip()
+        if variables:
+            content = _interpolate(content, variables)
+        gates = step.get_gates()
+        if gates:
+            gate_lines = []
+            for g in gates:
+                cmd = _interpolate(g["command"], variables) if variables else g["command"]
+                label = _interpolate(g.get("label", ""), variables) if variables else g.get("label", "")
+                gate_lines.append(f"- `{cmd}` — {label}")
+            content += (
+                "\n\n## GATES (enforced automatically)\n\n"
+                "The following checks must pass before you can advance to the next step:\n\n"
+                + "\n".join(gate_lines) + "\n\n"
+                "`moderails mode next` will reject advancement until all gates pass."
+            )
+        return content + self.STEP_FOOTER
 
     def get_flow_steps(self, flow_name: str) -> list[str]:
         flow = self.get_by_name(flow_name)
@@ -166,7 +207,8 @@ class FlowService:
             return None
 
         steps_data = [
-            {"name": s.name, "position": s.position, "content": s.content}
+            {"name": s.name, "position": s.position, "content": s.content,
+             "gates": s.get_gates()}
             for s in sorted(source.steps, key=lambda s: s.position)
         ]
         return self.create(
@@ -195,11 +237,14 @@ class FlowService:
             flow_data = {
                 "name": flow.name,
                 "description": flow.description,
-                "steps": [
-                    {"name": s.name, "position": s.position, "content": s.content}
-                    for s in sorted(flow.steps, key=lambda s: s.position)
-                ],
+                "steps": [],
             }
+            for s in sorted(flow.steps, key=lambda s: s.position):
+                step_data = {"name": s.name, "position": s.position, "content": s.content}
+                gates = s.get_gates()
+                if gates:
+                    step_data["gates"] = gates
+                flow_data["steps"].append(step_data)
             data["flows"].append(flow_data)
 
         if path:
@@ -236,6 +281,7 @@ class FlowService:
                         name=step_data["name"],
                         position=step_data.get("position", i),
                         content=step_data.get("content", ""),
+                        gates=_serialize_gates(step_data.get("gates")),
                     )
                     self.session.add(step)
             else:
