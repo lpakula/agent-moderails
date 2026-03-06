@@ -4,15 +4,15 @@ build-backend = "hatchling.build"
 
 [project]
 name = "moderails"
-version = "0.8.8"
-description = "Structured agent workflow with persistent memory"
+version = "2.0.0"
+description = "Agentic workflow orchestrator with kanban UI"
 readme = "README.md"
 requires-python = ">=3.11"
 license = {text = "MIT"}
 authors = [
     {name = "Lukasz Pakula"}
 ]
-keywords = ["ai", "agent", "workflow", "cli", "memory", "modes"]
+keywords = ["ai", "agent", "workflow", "cli", "kanban", "orchestrator"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
@@ -29,6 +29,9 @@ dependencies = [
     "sqlalchemy>=2.0.0",
     "rich>=13.0.0",
     "jinja2>=3.1.0",
+    "fastapi>=0.100.0",
+    "uvicorn>=0.20.0",
+    "python-multipart>=0.0.6",
 ]
 
 [project.urls]
@@ -41,6 +44,7 @@ Issues = "https://github.com/lpakula/agent-moderails/issues"
 dev = [
     "pytest>=7.4.0",
     "pytest-cov>=4.1.0",
+    "httpx>=0.24.0",
 ]
 
 [project.scripts]
@@ -53,4 +57,8 @@ packages = ["moderails"]
 include = [
     "moderails/**/*.py",
     "moderails/**/*.md",
+    "moderails/**/*.html",
+    "moderails/**/*.toml",
+    "moderails/**/*.json",
+    "moderails/**/*.js",
 ]

@@ -5,24 +5,18 @@ import string
 from datetime import datetime, timezone
 from enum import Enum
 
-from sqlalchemy import Column, DateTime, Enum as SQLEnum, ForeignKey, String, Text
+from sqlalchemy import Column, DateTime, Enum as SQLEnum, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import DeclarativeBase, relationship
 
 
-def generate_task_id() -> str:
-    """Generate a 6-character alphanumeric task ID."""
+def generate_id() -> str:
+    """Generate a 6-character alphanumeric ID."""
     chars = string.ascii_lowercase + string.digits
-    return ''.join(secrets.choice(chars) for _ in range(6))
+    return "".join(secrets.choice(chars) for _ in range(6))
 
 
 class Base(DeclarativeBase):
     pass
-
-
-class TaskStatus(str, Enum):
-    DRAFT = "draft"
-    IN_PROGRESS = "in-progress"
-    COMPLETED = "completed"
 
 
 class TaskType(str, Enum):
@@ -32,134 +26,149 @@ class TaskType(str, Enum):
     CHORE = "chore"
 
 
-class Epic(Base):
-    __tablename__ = "epics"
-    
-    id: str = Column(String(6), primary_key=True, default=generate_task_id)
-    name: str = Column(String(255), nullable=False, unique=True)
-    skills: str = Column(Text, default="[]")  # JSON array of skill names
-    
-    tasks = relationship("Task", back_populates="epic")
-    
-    def get_skills(self) -> list[str]:
-        """Get skills as a list."""
-        import json
-        try:
-            return json.loads(self.skills or "[]")
-        except json.JSONDecodeError:
-            return []
-    
-    def set_skills(self, skill_list: list[str]) -> None:
-        """Set skills from a list."""
-        import json
-        self.skills = json.dumps(skill_list)
-    
-    def add_skill(self, skill_name: str) -> bool:
-        """Add a skill if not already present. Returns True if added."""
-        skills = self.get_skills()
-        if skill_name not in skills:
-            skills.append(skill_name)
-            self.set_skills(skills)
-            return True
-        return False
-    
-    def remove_skill(self, skill_name: str) -> bool:
-        """Remove a skill if present. Returns True if removed."""
-        skills = self.get_skills()
-        if skill_name in skills:
-            skills.remove(skill_name)
-            self.set_skills(skills)
-            return True
-        return False
-    
+class Project(Base):
+    __tablename__ = "projects"
+
+    id: str = Column(String(6), primary_key=True, default=generate_id)
+    name: str = Column(String(255), nullable=False)
+    path: str = Column(Text, nullable=False, unique=True)
+    integrations: str = Column(Text, default="{}")
+    created_at: datetime = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+    tasks = relationship("Task", back_populates="project", cascade="all, delete-orphan")
+
     def to_dict(self) -> dict:
         return {
             "id": self.id,
             "name": self.name,
-            "skills": self.get_skills(),
+            "path": self.path,
+            "integrations": self.integrations,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
         }
 
 
 class Task(Base):
     __tablename__ = "tasks"
-    
-    id: str = Column(String(6), primary_key=True, default=generate_task_id)
-    name: str = Column(String(255), nullable=False)
-    file_name: str = Column(String(255), nullable=False)
-    summary: str = Column(Text, default="")
+
+    id: str = Column(String(6), primary_key=True, default=generate_id)
+    project_id: str = Column(String(6), ForeignKey("projects.id"), nullable=False)
+    name: str = Column(String(255), default="")
     description: str = Column(Text, default="")
     type: TaskType = Column(SQLEnum(TaskType), default=TaskType.FEATURE)
-    status: TaskStatus = Column(SQLEnum(TaskStatus), default=TaskStatus.DRAFT)
-    git_hash: str = Column(String(40), default="")
-    completed_at: datetime = Column(DateTime, nullable=True)
-    epic_id: str = Column(String(6), ForeignKey("epics.id"), nullable=True)
+    worktree_branch: str = Column(String(255), default="")
     created_at: datetime = Column(DateTime, default=lambda: datetime.now(timezone.utc))
-    
-    epic = relationship("Epic", back_populates="tasks")
-    
-    @property
-    def file_path(self) -> str:
-        """Get relative path to task file."""
-        return f"_moderails/{self.file_name}"
-    
+
+    project = relationship("Project", back_populates="tasks")
+    runs = relationship("TaskRun", back_populates="task", cascade="all, delete-orphan",
+                        order_by="TaskRun.created_at")
+
     def to_dict(self) -> dict:
         return {
             "id": self.id,
+            "project_id": self.project_id,
             "name": self.name,
-            "file_name": self.file_name,
-            "summary": self.summary,
             "description": self.description,
             "type": self.type.value,
-            "status": self.status.value,
-            "epic": self.epic.name if self.epic else None,
-            "epic_id": self.epic_id,
-            "git_hash": self.git_hash,
-            "completed_at": self.completed_at.isoformat() if self.completed_at else None,
+            "worktree_branch": self.worktree_branch,
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }
 
 
-class Session(Base):
-    """Tracks the current working session for a task.
-    
-    Only one active session at a time. Sessions are created when a task
-    becomes in-progress and deleted when the task completes.
-    """
-    __tablename__ = "sessions"
-    
-    id: str = Column(String(6), primary_key=True, default=generate_task_id)
-    task_id: str = Column(String(6), ForeignKey("tasks.id"), unique=True, nullable=False)
-    current_mode: str = Column(String(20), default="start")
-    loaded_memories: str = Column(Text, default="[]")  # JSON array of memory names
+class Flow(Base):
+    __tablename__ = "flows"
+
+    id: str = Column(String(6), primary_key=True, default=generate_id)
+    name: str = Column(String(255), nullable=False, unique=True)
+    description: str = Column(Text, default="")
     created_at: datetime = Column(DateTime, default=lambda: datetime.now(timezone.utc))
-    updated_at: datetime = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
-    
-    task = relationship("Task", backref="session", uselist=False)
-    
-    def get_memories(self) -> list[str]:
-        """Get loaded memories as a list."""
-        import json
-        try:
-            return json.loads(self.loaded_memories or "[]")
-        except json.JSONDecodeError:
-            return []
-    
-    def add_memory(self, memory_name: str) -> bool:
-        """Add a memory if not already loaded. Returns True if added."""
-        import json
-        memories = self.get_memories()
-        if memory_name not in memories:
-            memories.append(memory_name)
-            self.loaded_memories = json.dumps(memories)
-            return True
-        return False
-    
+    updated_at: datetime = Column(DateTime, default=lambda: datetime.now(timezone.utc),
+                                  onupdate=lambda: datetime.now(timezone.utc))
+
+    steps = relationship("FlowStep", back_populates="flow", cascade="all, delete-orphan",
+                         order_by="FlowStep.position")
+
     def to_dict(self) -> dict:
         return {
             "id": self.id,
-            "task_id": self.task_id,
-            "current_mode": self.current_mode,
-            "loaded_memories": self.get_memories(),
+            "name": self.name,
+            "description": self.description,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+            "steps": [s.to_dict() for s in self.steps],
+        }
+
+
+class FlowStep(Base):
+    __tablename__ = "flow_steps"
+
+    id: str = Column(String(6), primary_key=True, default=generate_id)
+    flow_id: str = Column(String(6), ForeignKey("flows.id"), nullable=False)
+    name: str = Column(String(255), nullable=False)
+    position: int = Column(Integer, nullable=False, default=0)
+    content: str = Column(Text, default="")
+    created_at: datetime = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Column(DateTime, default=lambda: datetime.now(timezone.utc),
+                                  onupdate=lambda: datetime.now(timezone.utc))
+
+    flow = relationship("Flow", back_populates="steps")
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "flow_id": self.flow_id,
+            "name": self.name,
+            "position": self.position,
+            "content": self.content,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+        }
+
+
+class TaskRun(Base):
+    __tablename__ = "task_runs"
+
+    id: str = Column(String(6), primary_key=True, default=generate_id)
+    project_id: str = Column(String(6), ForeignKey("projects.id"), nullable=False)
+    task_id: str = Column(String(6), ForeignKey("tasks.id"), nullable=False)
+    flow_name: str = Column(String(255), nullable=False, default="default")
+    flow_chain: str = Column(Text, default="[]")
+    current_step: str = Column(String(255), default="")
+    outcome: str = Column(String(50), nullable=True)
+    log_path: str = Column(Text, default="")
+    user_prompt: str = Column(Text, default="")
+    prompt: str = Column(Text, default="")
+    summary: str = Column(Text, default="")
+    steps_completed: str = Column(Text, default="[]")
+    created_at: datetime = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    started_at: datetime = Column(DateTime, nullable=True)
+    completed_at: datetime = Column(DateTime, nullable=True)
+
+    task = relationship("Task", back_populates="runs")
+
+    @property
+    def status(self) -> str:
+        if self.completed_at:
+            return "completed"
+        if self.started_at:
+            return "running"
+        return "queued"
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "project_id": self.project_id,
+            "task_id": self.task_id,
+            "flow_name": self.flow_name,
+            "flow_chain": self.flow_chain,
+            "current_step": self.current_step,
+            "status": self.status,
+            "outcome": self.outcome,
+            "log_path": self.log_path,
+            "user_prompt": self.user_prompt,
+            "prompt": self.prompt,
+            "summary": self.summary,
+            "steps_completed": self.steps_completed,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "started_at": self.started_at.isoformat() if self.started_at else None,
+            "completed_at": self.completed_at.isoformat() if self.completed_at else None,
         }

@@ -1,326 +1,327 @@
-"""Task management CLI commands."""
-
-import subprocess
-import time
-from typing import Optional
+"""Task CLI commands -- CRUD for tasks from the project directory."""
 
 import click
 
-from ..config import is_private_mode
-from ..db.models import TaskStatus, TaskType
-from ..utils.git import get_staged_files, is_git_repo
-from .common import get_moderails_dir, get_services_or_exit
+from ..db.database import get_session, init_db
+from ..db.models import TaskType
+from ..services.project import ProjectService
+from ..services.run import RunService
+from ..services.task import TaskService
+
+
+def _resolve_project(session):
+    """Resolve the current project or exit."""
+    project_svc = ProjectService(session)
+    project = project_svc.resolve_current()
+    if project is None:
+        click.echo("Not inside a registered project. Run 'moderails register' first.")
+        raise SystemExit(1)
+    return project
+
+
+def _get_session():
+    init_db()
+    return get_session()
 
 
 @click.group()
-@click.pass_context
-def task(ctx):
-    """Task management commands."""
+def task():
+    """Manage tasks for the current project."""
     pass
 
 
 @task.command("create")
-@click.option("--name", "-n", required=True, help="Task name")
-@click.option("--description", "-d", help="Task description, max 500 chars (short context)")
-@click.option("--epic", "-e", help="Epic ID (6-character, optional)")
-@click.option("--type", "-t", type=click.Choice(["feature", "fix", "refactor", "chore"]), default="feature", help="Task type (default: feature)")
-@click.option("--status", "-s", type=click.Choice(["draft", "in-progress"]), default="in-progress", help="Initial task status (default: in-progress)")
-@click.pass_context
-def task_create(ctx, name: str, description: Optional[str], epic: Optional[str], type: str, status: str):
-    """Create a new task. Plan file is created when entering #plan mode."""
-    services = get_services_or_exit(ctx)
-    
-    # Validate epic first if provided
-    epic_obj = None
-    if epic:
-        epic_obj = services["epic"].get(epic)
-        if not epic_obj:
-            click.echo(f"❌ Epic '{epic}' not found")
-            return
-    
-    try:
-        task_type = TaskType(type)
-        task_status = TaskStatus(status)
-        task = services["task"].create(
-            name=name,
-            description=description or "",
-            epic_id=epic if epic else None,
-            task_type=task_type,
-            status=task_status,
-        )
-        
-        # Auto-create session if task starts as in-progress
-        if task_status == TaskStatus.IN_PROGRESS:
-            services["session"].ensure_active(task.id)
-        
-        click.echo(f"✅ Task created: {task.id} - {click.style(task.name, fg='green', bold=True)}")
-        click.echo(f"   Type: {task.type.value}")
-        if epic_obj:
-            click.echo(f"   Epic: {epic_obj.id} - {epic_obj.name}")
-        click.echo(f"   Status: {task.status.value}")
-        
-        return task
-    except ValueError as e:
-        click.echo(f"❌ Error: {e}")
-        return None
+@click.option("-t", "--title", required=True, help="Task title")
+@click.option("-d", "--description", required=True, help="Task description — used as the prompt for the first run")
+@click.option("--type", "task_type", default="feature",
+              type=click.Choice(["feature", "fix", "refactor", "chore"]))
+@click.option("--start", "start_now", is_flag=True,
+              help="Immediately enqueue the task (daemon picks it up)")
+@click.option("--flow", "flow_name", default="default", help="Flow to use (default: default)")
+def task_create(title, description, task_type, start_now, flow_name):
+    """Create a new task.
 
-
-@task.command("update")
-@click.option("--id", "-i", "task_id", required=True, help="Task ID (6-character)")
-@click.option("--name", help="New task name")
-@click.option("--status", "-s", type=click.Choice(["draft", "in-progress", "completed"]))
-@click.option("--type", type=click.Choice(["feature", "fix", "refactor", "chore"]), help="New task type")
-@click.option("--epic", "-e", "epic_id", default=None, help="Epic ID to assign (use 'none' to unassign)")
-@click.option("--summary", help="Task summary")
-@click.option("--description", "-d", help="Task description, max 500 chars (short context)")
-@click.option("--git-hash", help="Git commit hash")
-@click.option("--file-name", help="Task file name (e.g., my-task.md)")
-@click.pass_context
-def task_update(ctx, task_id: str, name: Optional[str], status: Optional[str], type: Optional[str], epic_id: Optional[str], summary: Optional[str], description: Optional[str], git_hash: Optional[str], file_name: Optional[str]):
-    """Update task name, status, type, epic, summary, description, git hash, or file name."""
-    services = get_services_or_exit(ctx)
-    
-    # Handle epic: "none" means unassign, None means don't change
-    epic_kwarg = "__unset__"
-    if epic_id is not None:
-        if epic_id.lower() == "none":
-            epic_kwarg = None
-        else:
-            epic_obj = services["epic"].get(epic_id)
-            if not epic_obj:
-                click.echo(f"❌ Epic '{epic_id}' not found")
-                return
-            epic_kwarg = epic_id
-    
-    status_enum = TaskStatus(status) if status else None
-    type_enum = TaskType(type) if type else None
-    
-    try:
-        t = services["task"].update(task_id, name=name, status=status_enum, task_type=type_enum, summary=summary, description=description, git_hash=git_hash, file_name=file_name, epic_id=epic_kwarg)
-    except ValueError as e:
-        click.echo(f"❌ Error: {e}")
-        return
-    
-    if not t:
-        click.echo(f"❌ Task '{task_id}' not found")
-        return
-    
-    # Auto-create session when task transitions to in-progress
-    if status == "in-progress":
-        services["session"].ensure_active(task_id)
-    
-    click.echo(f"✅ Updated task: {t.id} - {t.name} [{t.type.value}] [{t.status.value}]")
-    if epic_kwarg == "__unset__":
-        pass  # Epic not changed
-    elif epic_kwarg is None:
-        click.echo("   Epic: (unassigned)")
-    else:
-        click.echo(f"   Epic: {t.epic_id}")
-    
-    if status == "completed":
-        click.echo("\n💡 Now commit your changes with a descriptive message")
-
-
-@task.command("delete")
-@click.option("--id", "-i", "task_id", required=True, help="Task ID (6-character)")
-@click.option("--confirm", is_flag=True, help="Confirm deletion")
-@click.pass_context
-def task_delete(ctx, task_id: str, confirm: bool):
-    """Delete a task."""
-    if not confirm:
-        click.echo("Use --confirm to delete")
-        return
-    
-    services = get_services_or_exit(ctx)
-    if services["task"].delete(task_id):
-        click.echo(f"✅ Deleted task: {task_id}")
-    else:
-        click.echo(f"❌ Task '{task_id}' not found")
-
-
-@task.command("complete")
-@click.option("--id", "-i", "task_id", required=True, help="Task ID (6-character)")
-@click.option("--summary", "-s", help="Task summary")
-@click.option("--commit-message", "-m", help="Git commit message")
-@click.pass_context
-def task_complete(ctx, task_id: str, summary: Optional[str], commit_message: Optional[str]):
-    """Mark task as completed and optionally commit changes.
-    
-    In git repos: stages history.jsonl, commits with provided message, and updates task with git hash.
-    In non-git projects: marks task complete and exports to history.
+    Examples:
+      moderails task create -t "Fix login flow" -d "Safari shows blank page on submit"
+      moderails task create -t "Add pagination" --start --flow default
     """
-    services = get_services_or_exit(ctx)
-    moderails_dir = get_moderails_dir(ctx.obj.get("db_path"))
-    history_path = moderails_dir / "history.jsonl"
-    private_mode = is_private_mode()
-    use_git = is_git_repo()
-    
-    if use_git:
-        # Git workflow: require staged files and commit message
-        staged_files = get_staged_files()
-        if not staged_files:
-            click.echo("❌ No staged files found.")
-            click.echo("\n💡 Stage your changes first:")
-            click.echo("   git add <file1> <file2> ...")
-            click.echo("\nThen run this command again.")
-            return
-        
-        if not commit_message:
-            click.echo("❌ --commit-message is required.")
-            return
-    
+    session = _get_session()
     try:
-        # Update summary if provided
-        if summary:
-            services["task"].update(task_id, summary=summary)
-        
-        # Complete the task
-        task = services["task"].complete(task_id, git_hash=None)
-        click.echo(f"✅ Task completed: {task.id} - {task.name}")
-        
-        # Delete the session (task is done, session no longer needed)
-        services["session"].delete_for_task(task_id)
-        
-        # Export to history.jsonl
-        services["history"].export_task(task_id)
-        click.echo("✅ Exported to history.jsonl")
-        
-        # Git workflow: commit and update hash
-        if use_git:
-            # Step 1: Stage history.jsonl (skip in private mode - it's gitignored)
-            if not private_mode:
-                time.sleep(0.2)  # Let file watchers settle
-                stage_result = subprocess.run(
-                    ["git", "add", str(history_path)],
-                    check=False,
-                    capture_output=True,
-                    text=True
-                )
-                if stage_result.returncode != 0:
-                    click.echo("⚠️  Failed to stage history.jsonl")
-                    click.echo("\n## FALLBACK: Complete git workflow manually")
-                    click.echo("```bash")
-                    click.echo(f"git add {history_path}")
-                    click.echo(f"git commit -m \"{commit_message}\"")
-                    click.echo(f"moderails task update --task {task_id} --git-hash $(git rev-parse HEAD)")
-                    click.echo("```")
-                    if stage_result.stderr:
-                        click.echo(f"\nGit error: {stage_result.stderr.strip()}")
-                    return
-                
-                click.echo("✅ Staged history.jsonl")
-            
-            # Step 2: Commit
-            commit_result = subprocess.run(
-                ["git", "commit", "-m", commit_message],
-                check=False,
-                capture_output=True,
-                text=True
-            )
-            if commit_result.returncode != 0:
-                click.echo("⚠️  Commit failed")
-                click.echo("\n## FALLBACK: Complete git workflow manually")
-                click.echo("```bash")
-                click.echo(f"git commit -m \"{commit_message}\"")
-                click.echo(f"moderails task update --task {task_id} --git-hash $(git rev-parse HEAD)")
-                click.echo("```")
-                if commit_result.stderr:
-                    click.echo(f"\nGit error: {commit_result.stderr.strip()}")
-                return
-            
-            click.echo(f"✅ Committed: {commit_message}")
-            
-            # Step 3: Get git hash and update task
-            hash_result = subprocess.run(
-                ["git", "rev-parse", "HEAD"],
-                check=False,
-                capture_output=True,
-                text=True
-            )
-            if hash_result.returncode != 0:
-                click.echo("⚠️  Could not get git hash")
-                click.echo("\n## FALLBACK: Update task with git hash manually")
-                click.echo("```bash")
-                click.echo(f"moderails task update --task {task_id} --git-hash $(git rev-parse HEAD)")
-                click.echo("```")
-                return
-            
-            git_hash = hash_result.stdout.strip()
-            services["task"].update(task_id, git_hash=git_hash)
-            click.echo(f"✅ Updated task with git hash: {git_hash[:7]}")
-            click.echo(f"\n🎉 Task {task_id} fully completed and committed!")
-        
-    except ValueError as e:
-        click.echo(f"❌ {e}")
+        project = _resolve_project(session)
+        task_svc = TaskService(session)
+        t = task_svc.create(
+            project_id=project.id,
+            name=title,
+            description=description,
+            task_type=TaskType(task_type),
+        )
+
+        if start_now:
+            run_svc = RunService(session)
+            run_svc.enqueue(project.id, t.id, flow_name)
+
+        click.echo(f"Created {click.style(t.id, fg='cyan')} — {click.style(title, fg='green', bold=True)}")
+        click.echo(f"   Type:  {t.type.value}")
+        if start_now:
+            click.echo(f"   Flow:  {flow_name}")
+            click.echo("   Daemon will pick up shortly.")
+    finally:
+        session.close()
+
+
+def _render_task_table(rows: list[dict]) -> None:
+    """Render a list of task dicts as a colored table."""
+    if not rows:
+        click.echo("No tasks found.")
+        return
+
+    has_project = any(r.get("project") for r in rows)
+
+    id_w, type_w, runs_w, proj_w, title_w = 6, 8, 4, 0, 40
+    if has_project:
+        proj_w = max(len(r.get("project", "")) for r in rows)
+        proj_w = max(proj_w, 7)
+
+    def header():
+        cols = [
+            click.style("ID".ljust(id_w), bold=True),
+            click.style("TYPE".ljust(type_w), bold=True),
+            click.style("RUNS".ljust(runs_w), bold=True),
+        ]
+        if has_project:
+            cols.append(click.style("PROJECT".ljust(proj_w), bold=True))
+        cols.append(click.style("TITLE", bold=True))
+        return "  ".join(cols)
+
+    def separator():
+        cols = ["─" * id_w, "─" * type_w, "─" * runs_w]
+        if has_project:
+            cols.append("─" * proj_w)
+        cols.append("─" * title_w)
+        return click.style("  ".join(cols), fg="bright_black")
+
+    click.echo(header())
+    click.echo(separator())
+
+    for r in rows:
+        title = r["title"] or "Untitled"
+        if len(title) > 55:
+            title = title[:52] + "..."
+
+        run_count = r["run_count"]
+        has_active = r["has_active"]
+        dim = "white" if has_active else "bright_black" if run_count > 0 else "white"
+
+        runs_str = click.style(str(run_count).ljust(runs_w),
+                               fg="bright_yellow" if has_active else "bright_black" if run_count > 0 else "white")
+
+        cols = [
+            click.style(r["id"].ljust(id_w), fg=dim),
+            click.style(r["type"].ljust(type_w), fg="bright_black" if not has_active else "green"),
+            runs_str,
+        ]
+        if has_project:
+            cols.append(click.style(r.get("project", "").ljust(proj_w), fg="cyan"))
+        cols.append(click.style(title, fg=dim, bold=has_active))
+        click.echo("  ".join(cols))
+
+
+def _tasks_to_rows(tasks, session, project_name: str = "") -> list[dict]:
+    run_svc = RunService(session)
+    rows = []
+    for t in tasks:
+        active_run = run_svc.get_active(t.id)
+        history = run_svc.get_history(t.id)
+        run_count = len(history)
+        has_active = active_run is not None
+
+        rows.append({
+            "id": t.id,
+            "type": t.type.value,
+            "run_count": run_count,
+            "has_active": has_active,
+            "title": t.name,
+            "project": project_name,
+            "sort_key": (
+                not has_active,
+                -t.created_at.timestamp(),
+            ),
+        })
+    return rows
 
 
 @task.command("list")
-@click.option("--status", "-s", type=click.Choice(["draft", "in-progress", "completed"]), help="Filter by status")
-@click.option("--epic-name", "-e", help="Filter by epic name")
-@click.pass_context
-def task_list(ctx, status: Optional[str], epic_name: Optional[str]):
-    """List all tasks as a simple table (for agents)."""
-    services = get_services_or_exit(ctx)
-    
-    # Get all tasks
-    status_enum = TaskStatus(status) if status else None
-    tasks = services["task"].list_all(epic_name=epic_name, status=status_enum)
-    
-    if not tasks:
-        click.echo("No tasks found.")
-        return
-    
-    # Sort: non-completed tasks first (newest at top), then completed tasks at bottom (newest at top)
-    sorted_tasks = sorted(
-        tasks,
-        key=lambda x: (
-            x.status == TaskStatus.COMPLETED,  # False (0) first, True (1) last
-            -(x.completed_at if (x.status == TaskStatus.COMPLETED and x.completed_at) else x.created_at).timestamp()
+@click.option("--all", "-a", "show_all", is_flag=True,
+              help="List tasks across all projects")
+@click.option("--project", "-p", "project_id", default=None,
+              help="Project ID (use outside a project directory)")
+def task_list(show_all, project_id):
+    """List tasks for the current project.
+
+    Use --all to list tasks across all projects, or --project to target
+    a specific project by ID from anywhere.
+    """
+    session = _get_session()
+    try:
+        project_svc = ProjectService(session)
+        task_svc = TaskService(session)
+
+        if show_all:
+            projects = project_svc.list_all()
+        elif project_id:
+            proj = project_svc.get(project_id)
+            if not proj:
+                click.echo(f"Project {project_id} not found.")
+                raise SystemExit(1)
+            projects = [proj]
+        else:
+            current = project_svc.resolve_current()
+            if not current:
+                click.echo("Not inside a registered project. Use --all or --project <id>.")
+                raise SystemExit(1)
+            projects = [current]
+
+        rows = []
+        for proj in projects:
+            tasks = task_svc.list_by_project(proj.id)
+            proj_name = proj.name if show_all else ""
+            rows.extend(_tasks_to_rows(tasks, session, proj_name))
+
+        rows.sort(key=lambda r: r["sort_key"])
+        _render_task_table(rows)
+    finally:
+        session.close()
+
+
+@task.command("show")
+@click.option("--id", "task_id", required=True, help="Task ID")
+def task_show(task_id):
+    """Show task details and run history."""
+    session = _get_session()
+    try:
+        task_svc = TaskService(session)
+        run_svc = RunService(session)
+        t = task_svc.get(task_id)
+        if not t:
+            click.echo(f"Task {task_id} not found.")
+            raise SystemExit(1)
+
+        click.echo(f"ID:       {click.style(t.id, fg='cyan')}")
+        click.echo(f"Title:    {click.style(t.name or '-', bold=True)}")
+        click.echo(f"Type:     {t.type.value}")
+        if t.worktree_branch:
+            click.echo(f"Branch:   {t.worktree_branch}")
+        click.echo(f"Created:  {t.created_at:%Y-%m-%d %H:%M}")
+        if t.description:
+            click.echo(f"\n{t.description}")
+
+        runs = run_svc.list_by_task(task_id)
+        if runs:
+            click.echo(f"\n{click.style('RUNS', bold=True)}  ({len(runs)})")
+            click.echo(click.style("  " + "─" * 60, fg="bright_black"))
+            for r in runs:
+                status_color = {"queued": "bright_blue", "running": "bright_yellow",
+                                "completed": "green"}.get(r.status, "bright_black")
+                step = r.current_step or ("-" if r.status != "completed" else "done")
+                click.echo(
+                    f"  {click.style(r.id[:8], fg='bright_black')}  "
+                    f"{click.style(r.status.ljust(9), fg=status_color)}  "
+                    f"{click.style(r.flow_name.ljust(12), fg='cyan')}  "
+                    f"step={step}"
+                )
+                if r.summary:
+                    preview = r.summary[:120].replace("\n", " ")
+                    if len(r.summary) > 120:
+                        preview += "..."
+                    click.echo(f"    {click.style(preview, fg='bright_black')}")
+    finally:
+        session.close()
+
+
+@task.command("start")
+@click.option("--id", "task_id", required=True, help="Task ID")
+@click.option("--flow", "flows", multiple=True, help="Flow to run (repeat to chain, e.g. --flow default --flow submit-pr)")
+@click.option("--prompt", "-p", default="", help="User prompt for this run")
+def task_start(task_id, flows, prompt):
+    """Enqueue a new run for a task.
+
+    Pass --flow once for a single flow, or repeat it to chain multiple flows
+    executed in order:
+
+      moderails task start --id abc123 --flow default
+      moderails task start --id abc123 --flow ripper-5 --flow submit-pr
+    """
+    chain = list(flows) or ["default"]
+    session = _get_session()
+    try:
+        task_svc = TaskService(session)
+        t = task_svc.get(task_id)
+        if not t:
+            click.echo(f"Task {task_id} not found.")
+            raise SystemExit(1)
+
+        run_svc = RunService(session)
+        run = run_svc.enqueue(t.project_id, task_id, chain[0],
+                              user_prompt=prompt, flow_chain=chain)
+        chain_str = " → ".join(click.style(f, fg="bright_green") for f in chain)
+        click.echo(
+            f"Queued run {click.style(run.id[:8], fg='cyan')} "
+            f"for task {click.style(task_id, fg='cyan')} "
+            f"({chain_str}) — daemon will pick up shortly"
         )
-    )
-    
-    # Simple table format: id | name | status | epic_id
-    click.echo("id     | name                                             | status      | epic_id")
-    click.echo("-------|--------------------------------------------------|-------------|--------")
-    for task in sorted_tasks:
-        name_truncated = task.name[:48] + ".." if len(task.name) > 50 else task.name
-        epic_id = task.epic_id if task.epic_id else ""
-        click.echo(f"{task.id} | {name_truncated:<48} | {task.status.value:<11} | {epic_id}")
+    finally:
+        session.close()
 
 
-@task.command("load")
-@click.option("--id", "-i", "task_id", required=True, help="Task ID (6-character)")
-@click.pass_context
-def task_load(ctx, task_id: str):
-    """Load task details and plan file (task context only)."""
-    services = get_services_or_exit(ctx)
-    moderails_dir = get_moderails_dir(ctx.obj.get("db_path"))
-    
-    # Get task
-    task = services["task"].get(task_id)
-    if not task:
-        click.echo(f"❌ Task '{task_id}' not found")
-        return
-    
-    # Display task details
-    click.echo("## TASK DETAILS\n")
-    click.echo(f"**ID**: {task.id}")
-    click.echo(f"**Name**: {task.name}")
-    click.echo(f"**Type**: {task.type.value}")
-    click.echo(f"**Status**: {task.status.value}")
-    if task.epic:
-        click.echo(f"**Epic**: {task.epic.name} ({task.epic_id})")
-    if task.file_name:
-        click.echo(f"**File**: _moderails/{task.file_name}")
-    if task.summary:
-        click.echo(f"**Summary**: {task.summary}")
-    if task.description:
-        click.echo(f"**Description**: {task.description}")
-    click.echo()
-    
-    # Load task file content
-    if task.file_name:
-        task_file = moderails_dir / task.file_name
-        if task_file.exists():
-            click.echo("## TASK PLAN\n")
-            click.echo(task_file.read_text())
+
+@task.command("update")
+@click.option("--id", "task_id", required=True, help="Task ID")
+@click.option("--description", "-d", default=None, help="Update description")
+@click.option("--title", "-t", default=None, help="New title")
+def task_update(task_id, description, title):
+    """Update a task.
+
+    Example: moderails task update --id abc123 -t "Better title"
+    """
+    session = _get_session()
+    try:
+        task_svc = TaskService(session)
+        t = task_svc.get(task_id)
+        if not t:
+            click.echo(f"Task {task_id} not found.")
+            raise SystemExit(1)
+
+        updates = {}
+        if title is not None:
+            updates["name"] = title
+        if description is not None:
+            updates["description"] = description
+        if updates:
+            task_svc.update(task_id, **updates)
+
+        t = task_svc.get(task_id)
+        click.echo(f"Updated {click.style(t.id, fg='cyan')}  {t.name}")
+    finally:
+        session.close()
+
+
+@task.command("delete")
+@click.option("--id", "task_id", required=True, help="Task ID")
+@click.option("--yes", "-y", is_flag=True, help="Skip confirmation")
+def task_delete(task_id, yes):
+    """Delete a task and all its runs."""
+    session = _get_session()
+    try:
+        task_svc = TaskService(session)
+        t = task_svc.get(task_id)
+        if not t:
+            click.echo(f"Task {task_id} not found.")
+            raise SystemExit(1)
+
+        if not yes:
+            click.confirm(f"Delete task '{t.name}' ({t.id})?", abort=True)
+
+        task_svc.delete(task_id)
+        click.echo(f"Deleted {task_id}")
+    finally:
+        session.close()

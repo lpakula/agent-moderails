@@ -1,111 +1,179 @@
-# CLI Commands
+# CLI Reference
 
-## Initialization
+## Project
 
 ```bash
-# Initialize in current directory (creates _moderails/)
-moderails init
+# Register the current git repo as a moderails project
+moderails register
+moderails register --name "My App"
 
-# Initialize in private mode (all _moderails files gitignored)
-moderails init --private
+# List all registered projects
+moderails project list
+
+# Rename a project
+moderails project update --name "New Name"
+moderails project update --id <project-id> --name "New Name"
+
+# Unregister a project
+moderails project delete
+moderails project delete --id <project-id>
 ```
 
-## Session Management
+## Tasks
 
 ```bash
-# Start session (shows status, in-progress tasks, available epics)
-moderails start
+# List tasks for the current project
+moderails task list
 
-# Instant resume — reload full session context without prompts
-moderails start --rerail
+# List tasks across all projects
+moderails task list --all
 
-# Get mode definition
-moderails mode --name <mode>
+# Show task details and run history
+moderails task show --id <task-id>
 
-# Run database migrations
-moderails migrate
+# Create a task (-d is required — becomes the prompt for the first run)
+moderails task create -t "Fix login bug" -d "Safari shows blank page on submit"
+moderails task create -t "Add pagination" -d "Add cursor-based pagination to the posts list" --type feature
+
+# Start a run immediately after creating
+moderails task create -t "My task" --start --flow default
+
+# Update a task
+moderails task update --id <task-id> --title "Better title"
+moderails task update --id <task-id> --description "Updated description"
+
+# Delete a task
+moderails task delete --id <task-id>
+moderails task delete --id <task-id> --yes
 ```
 
-> **Tip:** Use `/moderails --rerail` in your editor to instantly resume an interrupted session with full context (protocol rules, epic skills, task plan, current mode).
-
-## Listing
+## Runs
 
 ```bash
-# List tasks (human-friendly)
-moderails list [--status draft|in-progress|completed] [--epic-name <name>]
+# List runs for the current project
+moderails run list
 
-# List tasks (agent-friendly table)
-moderails task list [--status draft|in-progress|completed] [--epic-name <name>]
+# List runs for a specific task
+moderails run list --task <task-id>
 
-# List epics (agent-friendly table)
-moderails epic list
+# List runs across all projects
+moderails run list --all
+
+# Show run details
+moderails run show <run-id>
+
+# Print logs for a run
+moderails run logs <run-id>
+moderails run logs <run-id> --follow
+moderails run logs <run-id> --raw
+
+# Enqueue a new run for a task
+moderails task start --id <task-id>
+moderails task start --id <task-id> --flow ripper-5
+moderails task start --id <task-id> --flow default --prompt "Focus on the mobile layout"
+
+# Chain multiple flows (executed in order)
+moderails task start --id <task-id> --flow ripper-5 --flow submit-pr
+moderails task start --id <task-id> --flow default --flow submit-pr --prompt "Ship it"
 ```
 
-## Task Management
+## Flows
 
 ```bash
-# Create task (defaults to in-progress, plan file created when entering #plan mode)
-moderails task create --name "Task Name" [--type feature|fix|refactor|chore] [--status draft|in-progress] [--epic <epic-id>]
+# List all flows
+moderails flow list
 
-# Update task
-moderails task update --id <task-id> [--name <name>] [--status <status>] [--type <type>] [--summary <text>]
+# Show a flow and its steps
+moderails flow show <name>
 
-# Complete task (in git repos: stages history, commits, updates git hash)
-moderails task complete --id <task-id> --commit-message "<type>: <description>" [--summary "<text>"]
+# Create a flow
+moderails flow create <name>
+moderails flow create <name> --description "What this flow does"
+moderails flow create <name> --copy-from default
 
-# Complete task (non-git projects: marks complete and exports to history)
-moderails task complete --id <task-id> [--summary "<text>"]
+# Delete a flow
+moderails flow delete <name>
+moderails flow delete <name> --yes
 
-# Delete task
-moderails task delete --id <task-id> --confirm
+# Export / import
+moderails flow export --output flows.json
+moderails flow import flows.json
 ```
 
-
-## Epic Management
+### Steps
 
 ```bash
-# Create epic
-moderails epic create --name "Epic Name"
+# List steps in a flow
+moderails flow step list --flow <name>
 
-# Create epic with skills attached
-moderails epic create --name "Epic Name" --skills auth --skills payments
+# Add a step (from file)
+moderails flow step add --flow <name> --name <step-name> --content step.md
 
-# Update epic name
-moderails epic update --id <epic-id> --name "New Epic Name"
+# Add a step (from stdin)
+cat step.md | moderails flow step add --flow <name> --name <step-name>
 
-# Add skill to epic
-moderails epic update --id <epic-id> --add-skill <skill-name>
+# Add a step at a specific position
+moderails flow step add --flow <name> --name <step-name> --content step.md --position 2
 
-# Remove skill from epic
-moderails epic update --id <epic-id> --remove-skill <skill-name>
+# Edit a step's content
+moderails flow step edit --flow <name> --name <step-name> --content step.md
 
-# Load epic context (shows tasks, skills, and recent history)
-moderails epic load --id <epic-id>
+# Remove a step
+moderails flow step remove --flow <name> --name <step-name>
 ```
 
-> **Skills:** Epic skills are automatically loaded when working on tasks within that epic. Skills provide domain-specific context (e.g., `auth`, `payments`, `database`) that helps the agent understand project patterns.
-
-## Context Management
+## Daemon
 
 ```bash
-# List available skills, memories, and files tree
-moderails context list
+# Start the daemon (background)
+moderails daemon start
 
-# Load specific memories (flags can be combined)
-moderails context load --memory auth --memory payments
+# Start in foreground (logs to terminal + log file)
+moderails daemon start --foreground
 
-# Create a mandatory context file 
-moderails context save --name conventions --mandatory
+# Stop the daemon
+moderails daemon stop
 
-# Create a memory file 
-moderails context save --name auth --memory
+# Show daemon status
+moderails daemon status
 ```
 
-> **Note:** Mandatory context, skill names, list of available memories, and files tree are automatically injected when entering `#research` or `#fast` modes. Manual loading is only needed for additional memories.
+## Agent (internal)
 
-## History Sync
+These commands are called by the agent inside a worktree — not meant for manual use.
 
 ```bash
-# Sync history from file
-moderails sync
+# Load the next step instructions
+moderails mode next
+
+# Re-read the current step (after crash or restart)
+moderails mode current
+
+# Save run summary (called by the complete step)
+moderails run complete --summary "$(cat <<'EOF'
+## What was done
+...
+EOF
+)"
+```
+
+## UI
+
+```bash
+# Start the web UI
+moderails ui
+
+# Custom port
+moderails ui --port 9000
+
+# Auto-reload on code changes
+moderails ui --reload
+```
+
+## Database
+
+```bash
+# Wipe and recreate the database
+moderails db reset
+moderails db reset --yes
 ```

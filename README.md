@@ -1,103 +1,68 @@
-# Agent ModeRails
+# moderails
 
 ![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)
 ![License MIT](https://img.shields.io/badge/license-MIT-green.svg)
-![CLI](https://img.shields.io/badge/cli-pipx-orange.svg)
-![Coverage](https://img.shields.io/badge/coverage-73%25-brightgreen.svg)
 
-**Plan Mode on steroids** — structured agent workflow with persistent memory.
-
-Inspired by the [RIPER-5 protocol](https://forum.cursor.com/t/i-created-an-amazing-mode-called-riper-5-mode-fixes-claude-3-7-drastically/65516).
-
-> **Not for vibe coding.** ModeRails makes your coding agent a collaborator — working *with* you, not just *for* you. Take full advantage of AI-assisted development while staying in complete control. The protocol encourages you to understand every decision, learn along the way, and own your codebase.
+**Autonomous agent orchestrator** — run Cursor agents on real tasks, in isolated git worktrees, with persistent memory.
 
 ---
 
-## 🤔 Why ModeRails?
+## What it does
 
-Most AI coding agents fail not because they're weak, but because they work without structure.
+moderails lets you queue tasks for an AI agent (Cursor), execute them autonomously in isolated git worktrees, and review results — all without blocking your main branch.
 
-**Plan mode helps you think before acting — but it has limits:**
-- Context is lost when the chat closes
-- No task history to learn from
-- Can't resume work days later with full context
-- No git integration to track what was actually implemented
-
-This works for small isolated tasks — but breaks down for real projects.
-
-**Why ModeRails?**
-
-ModeRails gives you a complete protocol for multi-session development
-
-- **Persistent memory across sessions** — return to tasks days later with full context intact
-- **Session tracking with instant resume** — pick up exactly where you left off with `/moderails --rerail`
-- **Searchable task history** — agent learns from past work and similar features
-- **Epic-based grouping** — organize related tasks under a single epic, with shared context and skills
-- **Git integration** — captures diffs, file changes, and commit hashes for every completed task (non-git projects also supported with limited features)
-- **Explicit mode boundaries** — research can't write code, execute must follow the plan
-- **Enforced workflow** — prevents scope creep and direction changes mid-implementation
-
-**How the agent stays on track?**
-
-Unlike system prompts that are loaded once and gradually forgotten, ModeRails loads mode instructions **on demand** — every time you switch modes with `#research`, `#plan`, or `#execute`, the agent receives fresh, focused instructions for that phase.
-
-If the agent starts drifting or hallucinating mid-session, just run `/moderails --rerail`. This reloads the full protocol, task context, skills, and current mode — putting the agent back on track without starting a new conversation.
-
-**ModeRails is opt-in, not mandatory.** You choose when to use it:
-
-- **For structured work**: Initialise the protocol with `/moderails` command and follow the full protocol
-- **For small tasks & bug fixes**: Use **Fast mode** (`#fast`) — take advantage of persistent memory and context loading without the protocol
-- **No need for better context and enhanced agent cooperation?** Keep using regular chat
+- **Flows** — define ordered sequences of steps (research → plan → execute → test → commit)
+- **Runs** — each task execution is a tracked run with its own log, prompt, and outcome
+- **Daemon** — background process that picks up queued runs and launches the agent
+- **Web UI** — manage tasks, flows, and runs from a local dashboard
+- **Memory** — every run stores its summary; subsequent runs see full history
 
 ---
 
-## 📦 Installation
+## Quickstart
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/lpakula/agent-moderails/main/scripts/install.sh | bash
-```
+# Install
+pipx install git+https://github.com/lpakula/agent-moderails
 
-## 📥 Upgrade
-
-```bash
-pipx upgrade moderails
-```
-
-## 🚀 Quickstart
-
-```bash
+# Register your project
 cd my-project
-moderails init
-```
+moderails register
 
-Then in your editor:
+# Start the daemon
+moderails daemon start
 
+# Open the UI
+moderails ui
 ```
-/moderails
-```
-
-**And that's it!** The agent will guide you step-by-step through the workflow for your next task:
-```
-🔍 Research → 📋 Plan → 🔨 Execute → ✅ Complete
-```
-
-**🔍 Research** — Understand the task  
-**📋 Plan** — Define what will be done  
-**🔨 Execute** — Implement the plan  
-**✅ Complete** — Finish the task
-
-**Optional:**  
-**💡 Brainstorm** — Explore alternative approaches after the research  
-**❌ Abort** — Abandon task and reset changes  
-**⚡ Fast** — Context memory without the protocol (for small tasks and bug fixes)
 
 ---
 
-## 📚 Documentation
+## Core concepts
 
-- **[Installation](docs/installation.md)** — Installation and setup guide
-- **[Agent Modes](docs/modes.md)** — Understanding the workflow modes
-- **[Context Discovery](docs/context.md)** — Loading and searching project context
-- **[CLI Commands](docs/cli.md)** — Complete command reference
-- **Configuration** — *(Coming soon)*
-- **[Development](docs/development.md)** — Contributing and local setup
+### Flows
+A flow is an ordered list of steps. Each step is a markdown prompt loaded into the agent one at a time via `moderails mode next`. The agent completes the step, calls `moderails mode next`, and moves to the next step.
+
+Default flows included out of the box:
+- **default** — execute, test, commit
+- **ripper-5** — research, brainstorm, plan, execute, test, commit
+- **submit-pr** — creates a PR or comments on an existing one
+
+You can create, edit, and reorder flows from the UI or CLI.
+
+### Tasks
+A task represents a unit of work (feature, fix, refactor). Tasks belong to a project and have a title and description. Runs are created from tasks.
+
+### Runs
+A run is a single agent execution. It belongs to a task, follows a flow (or chain of flows), and records the agent's prompt, log, outcome, and summary. Multiple runs can exist per task.
+
+### Daemon
+The daemon picks up queued runs in order and launches Cursor in the task's git worktree. It monitors the agent process and marks the run complete when it exits.
+
+---
+
+## Documentation
+
+- **[Installation](docs/installation.md)** — setup and upgrade
+- **[Flows](docs/flows.md)** — understanding flows and steps
+- **[CLI Reference](docs/cli.md)** — all commands

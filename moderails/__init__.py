@@ -1,4 +1,3 @@
-"""Agent ModeRails - Structured agent workflow with persistent memory."""
+"""moderails -- agentic workflow orchestrator."""
 
-__version__ = "0.8.8"
-
+__version__ = "2.0.0"

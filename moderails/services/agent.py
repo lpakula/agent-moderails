@@ -1,0 +1,145 @@
+"""Agent launcher -- writes prompt and launches Cursor agent.
+
+Agent output is streamed as NDJSON to .moderails/agent-{run_id}.log in the worktree.
+Agent PID is stored in .moderails/agent.pid for liveness checks.
+"""
+
+import os
+import shutil
+import subprocess
+from pathlib import Path
+from typing import Optional
+
+from .context import ContextService
+
+
+class AgentService:
+    def __init__(self, project_dir: Path, worktree_path: Optional[Path] = None):
+        """Initialize agent service.
+
+        Args:
+            project_dir: .moderails/ dir in the main project
+            worktree_path: Path to the worktree root (if launching in a worktree)
+        """
+        self.project_dir = project_dir
+        self.worktree_path = worktree_path or project_dir.parent
+
+    def prepare_and_launch(
+        self,
+        run_id: str,
+        flow_name: str,
+        task_name: str,
+        task_id: str,
+        task_description: str = "",
+        task_type: str = "feature",
+        execution_history: Optional[list[dict]] = None,
+    ) -> tuple[bool, str, str]:
+        """Write prompt in the worktree, then launch Cursor agent.
+
+        Returns (success, prompt_content, log_path).
+        """
+        wt_moderails = self.worktree_path / ".moderails"
+        wt_moderails.mkdir(parents=True, exist_ok=True)
+        self._ensure_gitignore(wt_moderails)
+        context_svc = ContextService(wt_moderails)
+
+        (wt_moderails / "flow").write_text(flow_name)
+        (wt_moderails / "task_id").write_text(task_id)
+        (wt_moderails / "run_id").write_text(run_id)
+
+        self._copy_cursor_rule()
+
+        from ..utils.git import _run_git, get_worktree_diff
+        worktree_str = str(self.worktree_path)
+        log_output = _run_git(["log", "main..HEAD", "--oneline"], cwd=worktree_str)
+        git_log = log_output.strip() if log_output else ""
+        git_diff_stat = get_worktree_diff(base="main", cwd=worktree_str)
+
+        prompt_vars = {
+            "flow_name": flow_name,
+            "task_id": task_id,
+            "task_name": task_name,
+            "task_description": task_description,
+            "task_type": task_type,
+            "execution_history": execution_history or [],
+            "git_log": git_log,
+            "git_diff_stat": git_diff_stat,
+        }
+        prompt_content = context_svc.render_start_instructions(prompt_vars)
+
+        prompts_dir = Path.home() / ".moderails" / "prompts"
+        prompts_dir.mkdir(parents=True, exist_ok=True)
+        prompt_md = prompts_dir / f"{task_id}.md"
+        prompt_md.write_text(prompt_content)
+
+        log_file = wt_moderails / f"agent-{run_id}.log"
+        pid_file = wt_moderails / "agent.pid"
+        launched = self._launch_agent(self.worktree_path, prompt_md, log_file, pid_file)
+        return launched, prompt_content, str(log_file)
+
+    def _copy_cursor_rule(self) -> None:
+        """Copy .cursor/rules/moderails.md from main project into worktree."""
+        main_project = self.project_dir.parent
+        rule_src = main_project / ".cursor" / "rules" / "moderails.md"
+        if not rule_src.exists():
+            return
+
+        rule_dest_dir = self.worktree_path / ".cursor" / "rules"
+        rule_dest_dir.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(rule_src, rule_dest_dir / "moderails.md")
+
+    @staticmethod
+    def _ensure_gitignore(moderails_dir: Path) -> None:
+        """Ensure .moderails/ has a .gitignore for ephemeral files."""
+        gi = moderails_dir / ".gitignore"
+        entries = {"agent-*.log", "agent.pid", "flow", "task_id", "run_id"}
+        if gi.exists():
+            existing = gi.read_text()
+            missing = [e for e in sorted(entries) if e not in existing]
+            if not missing:
+                return
+            content = existing.rstrip("\n") + "\n" + "\n".join(missing) + "\n"
+        else:
+            content = "\n".join(sorted(entries)) + "\n"
+        gi.write_text(content)
+
+    def _launch_agent(
+        self, directory: Path, prompt_file: Path, log_file: Path, pid_file: Path,
+    ) -> bool:
+        """Launch Cursor agent with NDJSON output streamed to a log file."""
+        try:
+            fh = open(log_file, "w")
+            proc = subprocess.Popen(
+                [
+                    "agent", "-p", "-f", str(prompt_file),
+                    "--output-format", "stream-json",
+                ],
+                cwd=str(directory),
+                stdout=fh,
+                stderr=subprocess.STDOUT,
+            )
+            pid_file.write_text(str(proc.pid))
+            return True
+        except FileNotFoundError:
+            return False
+
+    @staticmethod
+    def is_agent_running(project_path: str, worktree_branch: str) -> bool:
+        """Check if an agent process is alive for a given worktree."""
+        if not worktree_branch:
+            return False
+        from .worktree import WorktreeService
+        wt_svc = WorktreeService(project_path)
+        wt_path = wt_svc.get_worktree_path(worktree_branch)
+        if not wt_path:
+            return False
+        pid_file = wt_path / ".moderails" / "agent.pid"
+        if not pid_file.exists():
+            return False
+        try:
+            pid = int(pid_file.read_text().strip())
+            os.kill(pid, 0)
+            return True
+        except (ValueError, ProcessLookupError, PermissionError):
+            pid_file.unlink(missing_ok=True)
+            return False

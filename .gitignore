@@ -21,3 +21,5 @@ rp5m/tasks/
 
 # OS
 .DS_Store
+
+.worktrees/

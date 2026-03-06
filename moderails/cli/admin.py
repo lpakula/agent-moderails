@@ -1,196 +1,209 @@
-"""Admin CLI commands (init, migrate, start, mode, list, sync)."""
+"""Admin CLI commands -- register, project list/delete, db reset."""
 
-import json
+import shutil
 from pathlib import Path
-from typing import Optional
 
 import click
 
-from ..db.database import init_db
-from ..db.models import TaskStatus
-from ..modes import get_mode
-from ..utils import create_command_files, format_task_line
-from ..utils.context import build_mode_context, build_rerail_context, get_project_root
-from .common import check_and_migrate, get_services, get_services_or_exit
+from ..config import get_repo_root, SYSTEM_DB
+from ..db.database import init_db, get_session, reset_engine
+from ..defaults import get_defaults_dir
+from ..services.project import ProjectService
 
 
-def register_admin_commands(cli):
-    """Register admin commands with the CLI group."""
-    
-    @cli.command()
-    @click.option("--private", is_flag=True, help="Private mode: ignore all moderails files (don't commit to version control)")
-    @click.pass_context
-    def init(ctx, private: bool):
-        """Initialize moderails in current directory."""
-        try:
-            db_path = init_db(private=private)
-            created_commands = create_command_files()
-            
-            if ctx.obj.get("json"):
-                click.echo(json.dumps({"status": "initialized", "path": str(db_path), "commands": created_commands}))
-            else:
-                # Use relative paths from current directory
-                cwd = Path.cwd()
-                rel_db_path = Path(db_path).relative_to(cwd) if Path(db_path).is_relative_to(cwd) else db_path
-                rel_commands = [Path(cmd).relative_to(cwd) if Path(cmd).is_relative_to(cwd) else cmd for cmd in created_commands]
-                
-                click.echo()
-                click.echo(click.style("✓ ModeRails initialized successfully!", fg="green", bold=True))
-                if private:
-                    click.echo(click.style("  🔒 Private mode: all _moderails files are gitignored", fg="yellow"))
-                click.echo()
-                click.echo(f"  Database:  {click.style(str(rel_db_path), fg='cyan')}")
-                for cmd in rel_commands:
-                    click.echo(f"  Commands:  {click.style(str(cmd), fg='cyan')}")
-                click.echo()
-                click.echo(click.style("Getting started:", fg="white", bold=True))
-                click.echo()
-                click.echo(f"  Type {click.style('/moderails', fg='yellow')} in your editor to activate the protocol.")
-                click.echo("  The AI agent will guide you through the process.")
-                click.echo()
-                click.echo(click.style("Example commands:", fg="white", bold=True))
-                click.echo()
-                click.echo(f"  {click.style('moderails list', fg='green')} - See all tasks")
-                click.echo(f"  {click.style('moderails epic list', fg='green')} - See all epics")
-                click.echo()
-                click.echo(click.style("💡 Tip:", fg="blue") + " Run 'moderails --help' for more")
-                click.echo()
-        except ValueError as e:
-            click.echo(f"❌ Invalid base directory: {e}")
+@click.command("register")
+@click.option("--name", "-n", default=None, help="Project name (defaults to directory name)")
+def register_cmd(name):
+    """Register current repo as a moderails project."""
+    repo_root = get_repo_root()
+    if repo_root is None:
+        click.echo("Not inside a git repository. Run this from a git repo root.")
+        raise SystemExit(1)
+
+    init_db()
+    session = get_session()
+    try:
+        project_svc = ProjectService(session)
+        project = project_svc.register(name=name or repo_root.name, path=str(repo_root))
+
+        project_dir = repo_root / ".moderails"
+        project_dir.mkdir(parents=True, exist_ok=True)
+
+        _update_gitignore(repo_root)
+        _generate_cursor_rule(repo_root)
+
+        click.echo()
+        click.secho("  Project registered", fg="green", bold=True)
+        click.echo()
+        click.echo(f"  Project:  {click.style(project.name, fg='cyan')}  ({project.id})")
+        click.echo(f"  Path:     {click.style(project.path, fg='cyan')}")
+        click.echo()
+    finally:
+        session.close()
+
+
+def _update_gitignore(repo_root: Path) -> None:
+    """Add .worktrees/ to .gitignore if not already present."""
+    gitignore = repo_root / ".gitignore"
+    pattern = ".worktrees/"
+
+    content = ""
+    if gitignore.exists():
+        content = gitignore.read_text()
+
+    if pattern not in content:
+        if content and not content.endswith("\n"):
+            content += "\n"
+        content += f"\n{pattern}\n"
+        gitignore.write_text(content)
+
+
+def _generate_cursor_rule(repo_root: Path) -> None:
+    """Generate .cursor/rules/moderails.md from the package default."""
+    defaults_dir = get_defaults_dir()
+    src = defaults_dir / "moderails-rule.md"
+    if not src.exists():
+        return
+
+    dest_dir = repo_root / ".cursor" / "rules"
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    dest = dest_dir / "moderails.md"
+    shutil.copy2(src, dest)
+
+
+@click.group()
+def db():
+    """Database management."""
+    pass
+
+
+@db.command("reset")
+@click.option("--yes", "-y", is_flag=True, help="Skip confirmation")
+def db_reset(yes):
+    """Delete and recreate the moderails database.
+
+    All projects and tasks will be lost. You will need to run
+    'moderails register' again in each project.
+    """
+    if not yes:
+        click.confirm(
+            f"This will delete {SYSTEM_DB} and all data. Continue?",
+            abort=True,
+        )
+
+    if SYSTEM_DB.exists():
+        SYSTEM_DB.unlink()
+
+    reset_engine()
+    init_db()
+
+    click.echo()
+    click.secho("  Database reset", fg="green", bold=True)
+    click.echo()
+    click.echo(f"  Run {click.style('moderails register', fg='yellow')} in your project directories to re-register them.")
+    click.echo()
+
+
+@click.group()
+def project():
+    """Manage registered projects."""
+    pass
+
+
+@project.command("list")
+def project_list():
+    """List all registered projects."""
+    session = get_session()
+    try:
+        project_svc = ProjectService(session)
+        projects = project_svc.list_all()
+        if not projects:
+            click.echo("No projects registered. Run 'moderails register' in a git repo.")
             return
+        _render_project_table(projects)
+    finally:
+        session.close()
 
-    @cli.command()
-    @click.pass_context
-    def migrate(ctx):
-        """Run database migrations to latest schema version."""
-        from ..db.database import find_db_path
-        from ..db.migrations import get_schema_version, CURRENT_VERSION
-        
-        db_path = find_db_path()
-        if not db_path:
-            click.echo(click.style("✗ No database found. Run: moderails init", fg="red"))
-            ctx.exit(1)
-        
-        current = get_schema_version(db_path)
-        click.echo(f"Current schema version: {current}")
-        click.echo(f"Latest schema version: {CURRENT_VERSION}")
-        
-        if current < CURRENT_VERSION:
-            click.echo("\nApplying migrations...")
-            migrated = check_and_migrate()
-            if migrated:
-                click.echo(click.style("✓ Database migrated successfully", fg="green"))
-            else:
-                click.echo(click.style("✗ Migration failed", fg="red"))
-                ctx.exit(1)
+
+def _render_project_table(projects) -> None:
+    id_w = 6
+    name_w = max((len(p.name) for p in projects), default=4)
+    name_w = max(name_w, 4)
+    tasks_w = 5
+
+    def header():
+        cols = [
+            click.style("ID".ljust(id_w), bold=True),
+            click.style("NAME".ljust(name_w), bold=True),
+            click.style("TASKS".ljust(tasks_w), bold=True),
+            click.style("PATH", bold=True),
+        ]
+        return "  ".join(cols)
+
+    def separator():
+        cols = ["─" * id_w, "─" * name_w, "─" * tasks_w, "─" * 40]
+        return click.style("  ".join(cols), fg="bright_black")
+
+    click.echo(header())
+    click.echo(separator())
+
+    for p in projects:
+        task_count = len(p.tasks) if p.tasks else 0
+        cols = [
+            click.style(p.id.ljust(id_w), fg="white"),
+            click.style(p.name.ljust(name_w), fg="cyan"),
+            click.style(str(task_count).ljust(tasks_w), fg="yellow"),
+            click.style(p.path, fg="bright_black"),
+        ]
+        click.echo("  ".join(cols))
+
+
+@project.command("update")
+@click.option("--id", "project_id", default=None, help="Project ID (defaults to current repo)")
+@click.option("--name", "-n", required=True, help="New project name")
+def project_update(project_id, name):
+    """Rename a project.
+
+    Example: moderails project update --name my-app
+    """
+    session = get_session()
+    try:
+        project_svc = ProjectService(session)
+
+        if project_id is None:
+            p = project_svc.resolve_current()
+            if p is None:
+                click.echo("Not inside a registered project. Use --id to specify.")
+                raise SystemExit(1)
+            project_id = p.id
+
+        updated = project_svc.update(project_id, name=name)
+        if updated:
+            click.echo(f"Renamed project {project_id} to {click.style(name, fg='cyan')}")
         else:
-            click.echo(click.style("✓ Database is up to date", fg="green"))
+            click.echo(f"Project {project_id} not found.")
+    finally:
+        session.close()
 
-    @cli.command()
-    @click.option("--rerail", is_flag=True, help="Instant resume: load session context without workflow prompts")
-    @click.pass_context
-    def start(ctx, rerail: bool):
-        """Show protocol overview and current status with agent guidance."""
-        # Auto-migrate database if needed (before showing status)
-        if check_and_migrate():
-            click.echo()  # Add blank line after migration message
-        
-        # Build context for start mode (includes current task and epics)
-        try:
-            services = get_services(ctx.obj.get("db_path"))
-            mode_context = build_mode_context(services, "start")
-        except FileNotFoundError:
-            click.echo("No moderails database found. Run `moderails init` first.")
-            return
-        
-        # Ensure session exists for in-progress task (edge case handling)
-        if mode_context.get("current_task"):
-            task_id = mode_context["current_task"]["id"]
-            services["session"].ensure_active(task_id)
-        
-        # --rerail: instant resume with session context (no workflow prompts)
-        if rerail:
-            if mode_context.get("current_task"):
-                task = services["task"].get(mode_context["current_task"]["id"])
-                project_root = get_project_root()
-                click.echo(build_rerail_context(services, task, project_root))
-                return
-            else:
-                # No in-progress task, fall through to normal start
-                click.echo("No in-progress task. Showing full start mode.\n")
-        
-        # Print protocol overview with dynamic context
-        click.echo(get_mode("start", mode_context))
 
-    @cli.command("mode", context_settings={"ignore_unknown_options": True, "allow_extra_args": True})
-    @click.option("--name", "-n", required=True, help="Mode name")
-    @click.pass_context
-    def mode(ctx, name: str):
-        """Get mode definition with dynamic context. Use when switching modes (e.g., #execute --no-confirmation)."""
-        valid_modes = ["fast", "research", "brainstorm", "plan", "execute", "complete", "abort"]
-        if name not in valid_modes:
-            click.echo(f"❌ Invalid mode. Valid modes: {', '.join(valid_modes)}")
-            return
-        
-        # Parse unknown options as flags (e.g., --no-confirmation → no-confirmation)
-        flags = []
-        for arg in ctx.args:
-            if arg.startswith("--"):
-                flags.append(arg[2:])  # Strip leading --
-        
-        # Build dynamic context for template rendering
-        try:
-            services = get_services(ctx.obj.get("db_path"))
-            mode_context = build_mode_context(services, name, flags=flags)
-            
-            # Update session mode
-            services["session"].set_mode(name)
-        except FileNotFoundError:
-            # No database - render without context (but still pass flags)
-            mode_context = {"flags": flags}
-        
-        click.echo(get_mode(name, mode_context))
+@project.command("delete")
+@click.option("--id", "project_id", default=None, help="Project ID to delete (defaults to current repo)")
+def project_delete(project_id):
+    """Unregister a project."""
+    session = get_session()
+    try:
+        project_svc = ProjectService(session)
 
-    @cli.command("list")
-    @click.option("--status", "-s", type=click.Choice(["draft", "in-progress", "completed"]), help="Filter by status")
-    @click.option("--epic-name", "-e", help="Filter by epic name")
-    @click.pass_context
-    def list_tasks(ctx, status: Optional[str], epic_name: Optional[str]):
-        """List all tasks (active first, completed at bottom)."""
-        services = get_services_or_exit(ctx)
-        
-        # Get all tasks
-        status_enum = TaskStatus(status) if status else None
-        tasks = services["task"].list_all(epic_name=epic_name, status=status_enum)
-        
-        if not tasks:
-            click.echo("No tasks found.")
-            return
-        
-        # Sort: completed first (top), then draft, then in-progress last (bottom, visible without scrolling)
-        def _list_sort_key(x):
-            ts = x.completed_at if (x.status == TaskStatus.COMPLETED and x.completed_at) else x.created_at
-            rank = (0 if x.status == TaskStatus.COMPLETED else 1 if x.status == TaskStatus.DRAFT else 2)
-            return (rank, -ts.timestamp())
-        sorted_tasks = sorted(tasks, key=_list_sort_key)
-        
-        # Display: task_id [type] [status] [epic] [timestamp] - task name
-        for task in sorted_tasks:
-            click.echo(format_task_line(task))
+        if project_id is None:
+            p = project_svc.resolve_current()
+            if p is None:
+                click.echo("Not inside a registered project. Use --id to specify.")
+                raise SystemExit(1)
+            project_id = p.id
 
-    @cli.command("sync")
-    @click.option("--force", is_flag=True, help="Force sync even if file hasn't changed")
-    @click.pass_context
-    def sync(ctx, force: bool):
-        """Manually sync from history.jsonl."""
-        services = get_services_or_exit(ctx)
-        
-        if force:
-            services["history"]._last_mtime = None
-        
-        imported = services["history"].sync_from_file()
-        
-        if imported > 0:
-            click.echo(f"✅ Imported {imported} tasks from history.jsonl")
+        if project_svc.unregister(project_id):
+            click.echo(f"Project {project_id} deleted.")
         else:
-            click.echo("✓ Already in sync")
+            click.echo(f"Project {project_id} not found.")
+    finally:
+        session.close()

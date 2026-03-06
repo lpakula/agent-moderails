@@ -1,69 +1,76 @@
 # Installation and Setup
 
-## Installation
+## Install
 
 ```bash
-# One-liner (recommended)
-curl -fsSL https://raw.githubusercontent.com/lpakula/agent-moderails/main/scripts/install.sh | bash
-
-# Or manual
 pipx install git+https://github.com/lpakula/agent-moderails
 ```
 
 ## Upgrade
 
 ```bash
-pipx upgrade moderails
-
-# Or manual
 pipx install --force git+https://github.com/lpakula/agent-moderails
 ```
 
-Your tasks and history are preserved during upgrades.
+## Register a project
 
-## Setup
+Run this inside any git repository you want to manage with moderails:
 
 ```bash
 cd my-project
-moderails init
+moderails register
 ```
 
-### Private Mode
+This will:
+- Register the project in the moderails database (`~/.moderails/moderails.db`)
+- Create a `.moderails/` directory in the project root
+- Add `.worktrees/` to `.gitignore`
+- Generate `.cursor/rules/moderails.md` — the agent rules file
 
-For projects where you don't want to commit any moderails files:
+You can give the project a custom name:
 
 ```bash
-moderails init --private
+moderails register --name "My App"
 ```
 
-This ignores all `_moderails/` files in git. Task history remains local and won't be committed.
+## Start the daemon
 
----
+The daemon is required for autonomous agent execution:
 
-This creates the following structure:
-
-```
-my-project/
-├── .cursor/commands/moderails.md ✨
-├── .claude/commands/moderails.md ✨
-└── _moderails/
-    ├── config.json ⚙️
-    ├── moderails.db 💾
-    ├── history.jsonl 📜
-    ├── tasks/ 📝
-    │   └── epic-name/
-    │       └── task-name-abc123.plan.md
-    └── context/ 📚
-        ├── mandatory/ 🔒
-        └── memories/ 💭
+```bash
+moderails daemon start
 ```
 
-✨ *moderails.md* — triggers the protocol in your editor  
-⚙️ *config.json* — workflow configuration  
-💾 *moderails.db* — stores epics and tasks for fast search (local only)  
-📜 *history.jsonl* — persistent storage of all completed tasks, searchable by the agent  
-📝 *tasks/* — temporary working files organized by epic (ignored in git)  
-📚 *context/* — project knowledge base  
-&nbsp;&nbsp;🔒 *mandatory/* — loaded automatically when entering research/fast modes  
-&nbsp;&nbsp;💭 *memories/* — named context documents the agent can discover and load
+Run in the foreground (useful for debugging):
 
+```bash
+moderails daemon start --foreground
+```
+
+Stop:
+
+```bash
+moderails daemon stop
+```
+
+## Open the UI
+
+```bash
+moderails ui
+```
+
+Opens the local dashboard at `http://localhost:8000`.
+
+## Database
+
+The system database lives at `~/.moderails/moderails.db`. To wipe everything and start fresh:
+
+```bash
+moderails db reset
+```
+
+Re-register your projects afterwards:
+
+```bash
+cd my-project && moderails register
+```
