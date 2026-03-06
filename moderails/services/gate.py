@@ -22,15 +22,15 @@ def evaluate_gates(
 ) -> list[dict]:
     """Evaluate a list of gates. Returns a list of failures (empty = all passed).
 
-    Each gate is {"command": "...", "label": "..."}.
+    Each gate is {"command": "...", "message": "..."}.
     A gate passes when the command exits 0.
-    Supports {{variable}} interpolation in command and label.
+    Supports {{variable}} interpolation in command and message.
     """
     variables = variables or {}
     failures = []
     for gate in gates:
         command = _interpolate(gate.get("command", ""), variables)
-        label = _interpolate(gate.get("label", command), variables)
+        message = _interpolate(gate.get("message", command), variables)
         if not command:
             continue
         try:
@@ -41,21 +41,21 @@ def evaluate_gates(
             if result.returncode != 0:
                 stderr = result.stderr.strip()
                 failures.append({
-                    "label": label,
+                    "message": message,
                     "command": command,
                     "exit_code": result.returncode,
                     "stderr": stderr[:500] if stderr else "",
                 })
         except subprocess.TimeoutExpired:
             failures.append({
-                "label": label,
+                "message": message,
                 "command": command,
                 "exit_code": -1,
                 "stderr": f"Timed out after {timeout}s",
             })
         except Exception as e:
             failures.append({
-                "label": label,
+                "message": message,
                 "command": command,
                 "exit_code": -1,
                 "stderr": str(e),

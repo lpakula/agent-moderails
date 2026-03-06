@@ -4,11 +4,16 @@ Agent output is streamed as NDJSON to .moderails/agent-{run_id}.log in the workt
 Agent PID is stored in .moderails/agent.pid for liveness checks.
 """
 
+import logging
 import os
 import shutil
+import signal
 import subprocess
+import time
 from pathlib import Path
 from typing import Optional
+
+logger = logging.getLogger("moderails.agent")
 
 from .context import ContextService
 
@@ -121,6 +126,37 @@ class AgentService:
             pid_file.write_text(str(proc.pid))
             return True
         except FileNotFoundError:
+            return False
+
+    @staticmethod
+    def kill_agent(project_path: str, worktree_branch: str) -> bool:
+        """Kill the agent process for a worktree. Returns True if a process was killed."""
+        if not worktree_branch:
+            return False
+        from .worktree import WorktreeService
+        wt_svc = WorktreeService(project_path)
+        wt_path = wt_svc.get_worktree_path(worktree_branch)
+        if not wt_path:
+            return False
+        pid_file = wt_path / ".moderails" / "agent.pid"
+        if not pid_file.exists():
+            return False
+        try:
+            pid = int(pid_file.read_text().strip())
+            os.kill(pid, signal.SIGTERM)
+            for _ in range(10):
+                time.sleep(0.5)
+                try:
+                    os.kill(pid, 0)
+                except ProcessLookupError:
+                    break
+            else:
+                os.kill(pid, signal.SIGKILL)
+            logger.info("Killed agent process %d", pid)
+            pid_file.unlink(missing_ok=True)
+            return True
+        except (ValueError, ProcessLookupError, PermissionError):
+            pid_file.unlink(missing_ok=True)
             return False
 
     @staticmethod

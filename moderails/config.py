@@ -19,6 +19,7 @@ PROJECT_DIR = ".moderails"
 DEFAULT_CONFIG = {
     "daemon": {
         "poll_interval_seconds": 30,
+        "run_timeout_minutes": 30,
     },
     "ui": {
         "port": 4200,

@@ -773,8 +773,8 @@
                           <div class="flex gap-2 mb-2">
                             <input x-model="gate.command" placeholder="command, e.g. test -f output.txt"
                                    class="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-amber-500">
-                            <input x-model="gate.label" placeholder="label (optional)"
-                                   class="w-48 bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-amber-500">
+                            <input x-model="gate.message" placeholder="failure message (optional)"
+                                   class="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-amber-500">
                             <button type="button" @click="removeGate(stepForm, gi)" class="text-xs text-red-400 hover:text-red-300 px-1">&times;</button>
                           </div>
                         </template>
@@ -829,8 +829,8 @@
                         <div class="flex gap-2 mb-2">
                           <input x-model="gate.command" placeholder="command"
                                  class="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-amber-500">
-                          <input x-model="gate.label" placeholder="label"
-                                 class="w-40 bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-amber-500">
+                          <input x-model="gate.message" placeholder="failure message"
+                                 class="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-amber-500">
                           <button type="button" @click="removeGate(newStep, gi)" class="text-xs text-red-400 hover:text-red-300 px-1">&times;</button>
                         </div>
                       </template>

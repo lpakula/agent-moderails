@@ -3,6 +3,7 @@
 import logging
 import signal
 import time
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
@@ -22,6 +23,7 @@ class Daemon:
         self.running = False
         self.config = load_system_config()
         self.poll_interval = self.config["daemon"]["poll_interval_seconds"]
+        self.run_timeout_minutes = self.config["daemon"]["run_timeout_minutes"]
 
     def start(self) -> None:
         """Start the daemon loop."""
@@ -68,6 +70,19 @@ class Daemon:
                 continue
 
             if AgentService.is_agent_running(project.path, task.worktree_branch):
+                if self.run_timeout_minutes and run.started_at:
+                    started = run.started_at
+                    if started.tzinfo is None:
+                        started = started.replace(tzinfo=timezone.utc)
+                    elapsed = (datetime.now(timezone.utc) - started).total_seconds()
+                    if elapsed > self.run_timeout_minutes * 60:
+                        logger.warning(
+                            "Task %s run %s timed out after %dm (limit %dm)",
+                            task.id, run.id, int(elapsed / 60), self.run_timeout_minutes,
+                        )
+                        AgentService.kill_agent(project.path, task.worktree_branch)
+                        run_svc.mark_completed(run.id, outcome="timeout")
+                        continue
                 return
 
             outcome = run.outcome or "completed"

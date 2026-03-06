@@ -1,5 +1,7 @@
 """Mode CLI -- step navigation for agents (next/current)."""
 
+import sys
+
 import click
 
 from ..config import get_repo_root
@@ -77,17 +79,18 @@ def mode_next():
                     }
                     failures = evaluate_gates(gates, repo_root, variables=gate_vars)
                     if failures:
-                        click.echo("Gate check failed. Fix these before advancing:\n", err=True)
+                        lines = ["Gate check failed. Fix these before advancing:\n"]
                         for f in failures:
-                            click.echo(f"  ✗ {f['label']}", err=True)
+                            lines.append(f"  ✗ {f['message']}")
                             if f.get("stderr"):
                                 for line in f["stderr"].splitlines()[:3]:
-                                    click.echo(f"    {line}", err=True)
-                        click.echo(
+                                    lines.append(f"    {line}")
+                        lines.append(
                             "\nComplete the requirements, then run "
                             "`moderails mode next` again.",
-                            err=True,
                         )
+                        sys.stdout.write("\n".join(lines) + "\n")
+                        sys.stdout.flush()
                         raise SystemExit(1)
 
         if not current:

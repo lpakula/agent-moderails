@@ -90,7 +90,7 @@ function projectView() {
       this.startingTask = task.id;
       this.startChain = [];
       this.addFlowSelect = this.flows[0]?.name || 'default';
-      this.startPrompt = task.description || '';
+      this.startPrompt = '';
       this.isFirstRun = (task.run_count || 0) === 0;
     },
 

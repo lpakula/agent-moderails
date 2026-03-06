@@ -177,8 +177,8 @@ class FlowService:
             gate_lines = []
             for g in gates:
                 cmd = _interpolate(g["command"], variables) if variables else g["command"]
-                label = _interpolate(g.get("label", ""), variables) if variables else g.get("label", "")
-                gate_lines.append(f"- `{cmd}` — {label}")
+                msg = _interpolate(g.get("message", ""), variables) if variables else g.get("message", "")
+                gate_lines.append(f"- `{cmd}` — {msg}")
             content += (
                 "\n\n## GATES (enforced automatically)\n\n"
                 "The following checks must pass before you can advance to the next step:\n\n"

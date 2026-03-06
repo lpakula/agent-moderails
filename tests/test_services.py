@@ -2,9 +2,12 @@
 
 import json
 import tempfile
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from unittest.mock import patch
 
 from moderails.db.models import Flow, FlowStep, Task, TaskRun, TaskType
+from moderails.services.agent import AgentService
 from moderails.services.flow import FlowService
 from moderails.services.gate import evaluate_gates
 from moderails.services.project import ProjectService
@@ -288,14 +291,14 @@ class TestFlowService:
                 "position": 0,
                 "content": "# Execute",
                 "gates": [
-                    {"command": "test -f output.txt", "label": "Output file exists"},
+                    {"command": "test -f output.txt", "message": "Output file exists"},
                 ],
             },
             {"name": "commit", "position": 1, "content": "# Commit"},
         ])
         assert len(flow.steps) == 2
         assert flow.steps[0].get_gates() == [
-            {"command": "test -f output.txt", "label": "Output file exists"},
+            {"command": "test -f output.txt", "message": "Output file exists"},
         ]
         assert flow.steps[1].get_gates() == []
 
@@ -304,9 +307,9 @@ class TestFlowService:
         flow = svc.create("add-gated")
         step = svc.add_step(
             flow.id, "test", "# Test",
-            gates=[{"command": "npm test", "label": "Tests pass"}],
+            gates=[{"command": "npm test", "message": "Tests pass"}],
         )
-        assert step.get_gates() == [{"command": "npm test", "label": "Tests pass"}]
+        assert step.get_gates() == [{"command": "npm test", "message": "Tests pass"}]
 
     def test_get_step_obj(self, test_db):
         svc = FlowService(test_db)
@@ -325,7 +328,7 @@ class TestFlowService:
                 "name": "build",
                 "position": 0,
                 "content": "# Build",
-                "gates": [{"command": "make build", "label": "Build succeeds"}],
+                "gates": [{"command": "make build", "message": "Build succeeds"}],
             },
         ])
         content = svc.get_step_content("gate-content", "build")
@@ -348,15 +351,15 @@ class TestFlowService:
                 "name": "test",
                 "position": 0,
                 "content": "# Test",
-                "gates": [{"command": "pytest", "label": "Tests pass"}],
+                "gates": [{"command": "pytest", "message": "Tests pass"}],
             },
         ])
         copy = svc.duplicate("src-gates", "dst-gates")
-        assert copy.steps[0].get_gates() == [{"command": "pytest", "label": "Tests pass"}]
+        assert copy.steps[0].get_gates() == [{"command": "pytest", "message": "Tests pass"}]
 
     def test_export_import_gates_round_trip(self, test_db):
         svc = FlowService(test_db)
-        gates = [{"command": "ls *.png", "label": "Screenshots exist"}]
+        gates = [{"command": "ls *.png", "message": "Screenshots exist"}]
         svc.create("gate-export", steps=[
             {"name": "test", "position": 0, "content": "# Test", "gates": gates},
         ])
@@ -382,37 +385,37 @@ class TestFlowService:
 
 class TestGateEvaluation:
     def test_passing_gate(self, temp_dir):
-        gates = [{"command": "true", "label": "Always passes"}]
+        gates = [{"command": "true", "message": "Always passes"}]
         failures = evaluate_gates(gates, temp_dir)
         assert failures == []
 
     def test_failing_gate(self, temp_dir):
-        gates = [{"command": "false", "label": "Always fails"}]
+        gates = [{"command": "false", "message": "Always fails"}]
         failures = evaluate_gates(gates, temp_dir)
         assert len(failures) == 1
-        assert failures[0]["label"] == "Always fails"
+        assert failures[0]["message"] == "Always fails"
         assert failures[0]["exit_code"] != 0
 
     def test_multiple_gates_all_pass(self, temp_dir):
         (temp_dir / "hello.txt").write_text("hi")
         gates = [
-            {"command": "true", "label": "First"},
-            {"command": "test -f hello.txt", "label": "File exists"},
+            {"command": "true", "message": "First"},
+            {"command": "test -f hello.txt", "message": "File exists"},
         ]
         failures = evaluate_gates(gates, temp_dir)
         assert failures == []
 
     def test_multiple_gates_partial_failure(self, temp_dir):
         gates = [
-            {"command": "true", "label": "Passes"},
-            {"command": "test -f nonexistent.txt", "label": "Missing file"},
+            {"command": "true", "message": "Passes"},
+            {"command": "test -f nonexistent.txt", "message": "Missing file"},
         ]
         failures = evaluate_gates(gates, temp_dir)
         assert len(failures) == 1
-        assert failures[0]["label"] == "Missing file"
+        assert failures[0]["message"] == "Missing file"
 
     def test_file_exists_gate(self, temp_dir):
-        gates = [{"command": "test -f output.txt", "label": "Output exists"}]
+        gates = [{"command": "test -f output.txt", "message": "Output exists"}]
         failures = evaluate_gates(gates, temp_dir)
         assert len(failures) == 1
 
@@ -421,7 +424,7 @@ class TestGateEvaluation:
         assert failures == []
 
     def test_glob_gate(self, temp_dir):
-        gates = [{"command": "ls *.png 2>/dev/null | grep -q .", "label": "PNG files exist"}]
+        gates = [{"command": "ls *.png 2>/dev/null | grep -q .", "message": "PNG files exist"}]
         failures = evaluate_gates(gates, temp_dir)
         assert len(failures) == 1
 
@@ -430,7 +433,7 @@ class TestGateEvaluation:
         assert failures == []
 
     def test_gate_timeout(self, temp_dir):
-        gates = [{"command": "sleep 10", "label": "Slow command"}]
+        gates = [{"command": "sleep 10", "message": "Slow command"}]
         failures = evaluate_gates(gates, temp_dir, timeout=1)
         assert len(failures) == 1
         assert "Timed out" in failures[0]["stderr"]
@@ -439,29 +442,29 @@ class TestGateEvaluation:
         assert evaluate_gates([], temp_dir) == []
 
     def test_gate_stderr_captured(self, temp_dir):
-        gates = [{"command": "echo 'bad thing' >&2 && false", "label": "Fails with stderr"}]
+        gates = [{"command": "echo 'bad thing' >&2 && false", "message": "Fails with stderr"}]
         failures = evaluate_gates(gates, temp_dir)
         assert len(failures) == 1
         assert "bad thing" in failures[0]["stderr"]
 
-    def test_gate_without_label_uses_command(self, temp_dir):
+    def test_gate_without_message_uses_command(self, temp_dir):
         gates = [{"command": "false"}]
         failures = evaluate_gates(gates, temp_dir)
-        assert failures[0]["label"] == "false"
+        assert failures[0]["message"] == "false"
 
     def test_gate_interpolation(self, temp_dir):
         run_dir = temp_dir / "abc123"
         run_dir.mkdir()
         (run_dir / "screenshot.png").write_text("fake")
         gates = [
-            {"command": "ls {{run.id}}/*.png | grep -q .", "label": "Screenshots in {{run.id}}/"},
+            {"command": "ls {{run.id}}/*.png | grep -q .", "message": "Screenshots in {{run.id}}/"},
         ]
         variables = {"run.id": "abc123", "task.id": "t001", "flow.name": "react-js"}
         failures = evaluate_gates(gates, temp_dir, variables=variables)
         assert failures == []
 
     def test_gate_interpolation_missing_var_preserved(self, temp_dir):
-        gates = [{"command": "echo {{unknown.var}}", "label": "test"}]
+        gates = [{"command": "echo {{unknown.var}}", "message": "test"}]
         failures = evaluate_gates(gates, temp_dir, variables={"run.id": "x"})
         assert failures == []
 
@@ -469,7 +472,7 @@ class TestGateEvaluation:
         subdir = temp_dir / "sub"
         subdir.mkdir()
         (subdir / "marker.txt").write_text("here")
-        gates = [{"command": "test -f marker.txt", "label": "Marker exists"}]
+        gates = [{"command": "test -f marker.txt", "message": "Marker exists"}]
         failures = evaluate_gates(gates, subdir)
         assert failures == []
         failures = evaluate_gates(gates, temp_dir)
@@ -628,3 +631,81 @@ class TestRunService:
 
         runs = run_svc.list_by_project(test_project.id)
         assert len(runs) == 2
+
+
+class TestDaemonTimeout:
+    def test_timeout_kills_expired_run(self, test_db, test_project):
+        """Daemon should mark a run as 'timeout' when it exceeds run_timeout_minutes."""
+        from moderails.services.daemon import Daemon
+
+        task_svc = TaskService(test_db)
+        run_svc = RunService(test_db)
+        task = task_svc.create(test_project.id, "Long task")
+        task_svc.update(task.id, worktree_branch="task-branch")
+        run = run_svc.enqueue(test_project.id, task.id)
+        run_svc.mark_started(run.id)
+
+        run.started_at = datetime.now(timezone.utc) - timedelta(minutes=45)
+        test_db.commit()
+
+        daemon = Daemon.__new__(Daemon)
+        daemon.run_timeout_minutes = 30
+
+        with patch.object(AgentService, "is_agent_running", return_value=True), \
+             patch.object(AgentService, "kill_agent", return_value=True) as mock_kill:
+            daemon._process_project(test_project, task_svc, run_svc)
+            mock_kill.assert_called_once_with(test_project.path, "task-branch")
+
+        test_db.refresh(run)
+        assert run.completed_at is not None
+        assert run.outcome == "timeout"
+
+    def test_no_timeout_when_within_limit(self, test_db, test_project):
+        """Daemon should not kill a run that is still within the timeout."""
+        from moderails.services.daemon import Daemon
+
+        task_svc = TaskService(test_db)
+        run_svc = RunService(test_db)
+        task = task_svc.create(test_project.id, "Short task")
+        task_svc.update(task.id, worktree_branch="task-branch")
+        run = run_svc.enqueue(test_project.id, task.id)
+        run_svc.mark_started(run.id)
+
+        run.started_at = datetime.now(timezone.utc) - timedelta(minutes=10)
+        test_db.commit()
+
+        daemon = Daemon.__new__(Daemon)
+        daemon.run_timeout_minutes = 30
+
+        with patch.object(AgentService, "is_agent_running", return_value=True), \
+             patch.object(AgentService, "kill_agent") as mock_kill:
+            daemon._process_project(test_project, task_svc, run_svc)
+            mock_kill.assert_not_called()
+
+        test_db.refresh(run)
+        assert run.completed_at is None
+
+    def test_timeout_disabled_when_zero(self, test_db, test_project):
+        """Setting run_timeout_minutes to 0 disables the timeout."""
+        from moderails.services.daemon import Daemon
+
+        task_svc = TaskService(test_db)
+        run_svc = RunService(test_db)
+        task = task_svc.create(test_project.id, "Forever task")
+        task_svc.update(task.id, worktree_branch="task-branch")
+        run = run_svc.enqueue(test_project.id, task.id)
+        run_svc.mark_started(run.id)
+
+        run.started_at = datetime.now(timezone.utc) - timedelta(hours=5)
+        test_db.commit()
+
+        daemon = Daemon.__new__(Daemon)
+        daemon.run_timeout_minutes = 0
+
+        with patch.object(AgentService, "is_agent_running", return_value=True), \
+             patch.object(AgentService, "kill_agent") as mock_kill:
+            daemon._process_project(test_project, task_svc, run_svc)
+            mock_kill.assert_not_called()
+
+        test_db.refresh(run)
+        assert run.completed_at is None

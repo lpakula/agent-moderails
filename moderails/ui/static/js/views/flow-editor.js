@@ -79,7 +79,7 @@ function flowEditorView() {
     },
 
     addGate(form) {
-      form.gates.push({ command: '', label: '' });
+      form.gates.push({ command: '', message: '' });
     },
 
     removeGate(form, index) {

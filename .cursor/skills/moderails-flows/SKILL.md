@@ -42,15 +42,15 @@ Gates are optional shell commands on a step that `moderails mode next` enforces 
   "position": 1,
   "content": "# TEST\n\n...",
   "gates": [
-    {"command": "test -f .moderails/screenshots/homepage.png", "label": "Screenshot exists"},
-    {"command": "npm test -- --watchAll=false", "label": "Tests pass"}
+    {"command": "test -f .moderails/screenshots/homepage.png", "message": "Screenshot exists"},
+    {"command": "npm test -- --watchAll=false", "message": "Tests pass"}
   ]
 }
 ```
 
-Each gate has `command` (shell command, must exit 0) and `label` (shown on failure). Gates are optional — omit or use `[]` for no enforcement.
+Each gate has `command` (shell command, must exit 0) and `message` (human-readable failure feedback sent to the agent). Gates are optional — omit or use `[]` for no enforcement.
 
-Gate commands, labels, and step content support template variables: `{{run.id}}`, `{{task.id}}`, `{{flow.name}}`. These are resolved at runtime.
+Gate commands, messages, and step content support template variables: `{{run.id}}`, `{{task.id}}`, `{{flow.name}}`. These are resolved at runtime.
 
 ## Step Content Conventions
 
