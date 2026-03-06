@@ -13,9 +13,9 @@ import time
 from pathlib import Path
 from typing import Optional
 
-logger = logging.getLogger("moderails.agent")
-
 from .context import ContextService
+
+logger = logging.getLogger("moderails.agent")
 
 
 class AgentService:

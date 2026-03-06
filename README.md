@@ -2,67 +2,112 @@
 
 ![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)
 ![License MIT](https://img.shields.io/badge/license-MIT-green.svg)
+![CLI](https://img.shields.io/badge/cli-pipx-orange.svg)
 
-**Autonomous agent orchestrator** — run Cursor agents on real tasks, in isolated git worktrees, with persistent memory.
-
----
-
-## What it does
-
-moderails lets you queue tasks for an AI agent (Cursor), execute them autonomously in isolated git worktrees, and review results — all without blocking your main branch.
-
-- **Flows** — define ordered sequences of steps (research → plan → execute → test → commit)
-- **Runs** — each task execution is a tracked run with its own log, prompt, and outcome
-- **Daemon** — background process that picks up queued runs and launches the agent
-- **Web UI** — manage tasks, flows, and runs from a local dashboard
-- **Memory** — every run stores its summary; subsequent runs see full history
+**Autonomous agent orchestrator** — queue tasks, run agents in isolated git worktrees, review results. No babysitting.
 
 ---
 
-## Quickstart
+## Why moderails?
+
+Cloud agent platforms (Devin, Codex, etc.) run in isolated VMs — great for safety, but:
+
+- **No local context** — they can't access your dev environment, databases, local CLI tools, or project-specific setup
+- **One-shot execution** — a single prompt, a single attempt, no multi-step workflows
+- **No customisation** — you can't control the workflow or define your own execution steps
+- **Opaque execution** — limited visibility into what the agent is doing and why
+- **Vendor lock-in** — tied to a specific platform and pricing model
+
+moderails solves this:
+
+- **Local context** — agents have access to your local development environment, so they get the same context you get.
+- **Multi-step workflows** — define ordered sequences of steps with quality gates. The agent works through them one at a time.
+- **Full customisation** — create your own flows, steps, and gates. Control exactly how the agent works.
+- **Transparent execution** — stream logs in real time, inspect prompts, review outcomes. Everything is tracked.
+- **Open source** — runs on your machine, with your own local agents. No vendor lock-in.
+
+The workflow is simple:
+
+1. **Register a repository** — point moderails at any local git repo
+2. **Create a task** — describe what you want done (feature, fix, refactor)
+3. **Start a run** — executes the selected flow autonomously in the background
+4. **Review the PR** — the agent creates a pull request for you to review and merge
+
+---
+
+## 📦 Installation
 
 ```bash
-# Install
-pipx install git+https://github.com/lpakula/agent-moderails
+curl -fsSL https://raw.githubusercontent.com/lpakula/agent-moderails/main/scripts/install.sh | bash
+```
 
-# Register your project
+Or install directly:
+
+```bash
+pipx install git+https://github.com/lpakula/agent-moderails
+```
+
+### Upgrade
+
+```bash
+pipx upgrade moderails
+```
+
+### Prerequisites
+
+- Python 3.11+
+- Git
+- [Cursor agent CLI](https://docs.cursor.com/agent) (`agent` command)
+
+---
+
+## 🚀 Quickstart
+
+```bash
+# 1. Start the daemon (once, runs in background)
+moderails daemon start
+
+# 2. Register your project
 cd my-project
 moderails register
 
-# Start the daemon
-moderails daemon start
-
-# Open the UI
+# 3. Open the web UI
 moderails ui
+```
+
+From the UI at `http://localhost:4200`:
+
+1. Create a task — give it a title and description
+2. Start a run — pick a flow (or chain multiple flows)
+3. Watch the agent work — stream logs in real time
+4. Review the branch — the agent's changes are on an isolated worktree branch
+
+Or do it all from the CLI:
+
+```bash
+moderails task create -t "Add dark mode" -d "Add dark mode toggle to the settings page"
+moderails task start --id <task-id> --flow default
+moderails run logs <run-id> --follow
 ```
 
 ---
 
-## Core concepts
+## 🖥️ Web UI
 
-### Flows
-A flow is an ordered list of steps. Each step is a markdown prompt loaded into the agent one at a time via `moderails mode next`. The agent completes the step, calls `moderails mode next`, and moves to the next step.
+The dashboard at `http://localhost:4200` lets you:
 
-Default flows included out of the box:
-- **default** — execute, test, commit
-- **ripper-5** — research, brainstorm, plan, execute, test, commit
-- **submit-pr** — creates a PR or comments on an existing one
-
-You can create, edit, and reorder flows from the UI or CLI.
-
-### Tasks
-A task represents a unit of work (feature, fix, refactor). Tasks belong to a project and have a title and description. Runs are created from tasks.
-
-### Runs
-A run is a single agent execution. It belongs to a task, follows a flow (or chain of flows), and records the agent's prompt, log, outcome, and summary. Multiple runs can exist per task.
-
-### Daemon
-The daemon picks up queued runs in order and launches Cursor in the task's git worktree. It monitors the agent process and marks the run complete when it exits.
+- **Manage tasks** — create, edit, start runs
+- **Monitor runs** — live log streaming, status tracking
+- **Edit flows** — drag-and-drop step reordering, inline editing, gate configuration
+- **Import/export flows** — share flow definitions as JSON
+- **View the queue** — see pending and executing runs across all projects
+- and more...
 
 ---
 
-## Documentation
+## 📚 Documentation
 
-- **[Installation](docs/installation.md)** — setup and upgrade
-- **[Flows](docs/flows.md)** — understanding flows and steps
+- **[Installation](docs/installation.md)** — setup, upgrade, and project registration
+- **[Flows](docs/flows.md)** — flows, steps, gates, and template variables
 - **[CLI Reference](docs/cli.md)** — all commands
+- **[Development](docs/development.md)** — contributing and local setup
