@@ -103,11 +103,21 @@ function taskView() {
       return this.runs.find(r => this.isRunActive(r)) || null;
     },
 
+    runDisplayStatus(run) {
+      if (run.status === 'completed' && run.outcome && run.outcome !== 'completed') {
+        return run.outcome;
+      }
+      return run.status;
+    },
+
     runStatusBadge(status) {
       return {
         queued: 'bg-blue-900/50 text-blue-300',
         running: 'bg-yellow-900/50 text-yellow-300',
         completed: 'bg-green-900/50 text-green-300',
+        cancelled: 'bg-red-900/50 text-red-400',
+        failed: 'bg-red-900/50 text-red-300',
+        timeout: 'bg-orange-900/50 text-orange-300',
       }[status] || 'bg-gray-700 text-gray-300';
     },
 
@@ -117,12 +127,7 @@ function taskView() {
 
     outcomeBadge(outcome) {
       if (!outcome) return 'bg-gray-700 text-gray-300';
-      return {
-        completed: 'bg-green-900/50 text-green-300',
-        failed: 'bg-red-900/50 text-red-300',
-        cancelled: 'bg-yellow-900/50 text-yellow-300',
-        timeout: 'bg-orange-900/50 text-orange-300',
-      }[outcome] || 'bg-gray-700 text-gray-300';
+      return this.runStatusBadge(outcome);
     },
 
     toggleRun(runId) {

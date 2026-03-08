@@ -88,6 +88,9 @@ class Daemon:
                         continue
                 return
 
+            run_svc.session.refresh(run)
+            if run.completed_at:
+                continue
             outcome = run.outcome or "completed"
             logger.info("Task %s run %s finished (outcome=%s)", task.id, run.id, outcome)
             run_svc.mark_completed(run.id, outcome=outcome)
@@ -178,6 +181,7 @@ class Daemon:
                 "summary": r.summary or "",
             }
             for r in history
+            if r.outcome != "cancelled"
         ] or None
 
         project_dir = Path(project.path) / ".moderails"
