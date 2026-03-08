@@ -21,7 +21,10 @@
         {
           "name": "commit",
           "position": 2,
-          "content": "# COMMIT\n\n## PURPOSE\n\nStage and commit all changes including screenshots.\n\n## WORKFLOW\n\n1. **Stage all files** including screenshots:\n   ```\n   git add -A\n   ```\n\n2. **Review what will be committed**:\n   ```\n   git diff --cached --stat\n   ```\n\n3. **Write a descriptive commit message** and commit.\n   Include the list of screenshot paths in the commit message body so they are available for the PR.\n   Example:\n   ```\n   git commit -m \"feat: update homepage layout\n\n   Screenshots:\n   - .moderails/screenshots/{{run.id}}/homepage.png\n   - .moderails/screenshots/{{run.id}}/nav-updated.png\"\n   ```\n\n## RULES\n\n- Commit message must be descriptive (not just \"fix\" or \"update\")\n- Always include `.moderails/screenshots/{{run.id}}/` in the commit\n- List every screenshot path in the commit message body\n- Do not push"
+          "content": "# COMMIT\n\n## PURPOSE\n\nStage and commit all changes including screenshots.\n\n## WORKFLOW\n\n1. **Stage all files** including screenshots:\n   ```\n   git add -A\n   ```\n\n2. **Review what will be committed**:\n   ```\n   git diff --cached --stat\n   ```\n\n3. **Write a descriptive commit message** and commit.\n   Include the list of screenshot paths in the commit message body so they are available for the PR.\n   Example:\n   ```\n   git commit -m \"feat: update homepage layout\n\n   Screenshots:\n   - .moderails/screenshots/{{run.id}}/homepage.png\n   - .moderails/screenshots/{{run.id}}/nav-updated.png\"\n   ```\n\n## RULES\n\n- Commit message must be descriptive (not just \"fix\" or \"update\")\n- Always include `.moderails/screenshots/{{run.id}}/` in the commit\n- List every screenshot path in the commit message body\n- Do not push",
+          "gates": [
+            {"command": "test -z \"$(git status --porcelain)\"", "message": "Working tree has uncommitted changes. Stage and commit all files before advancing."}
+          ]
         }
       ]
     }

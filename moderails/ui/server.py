@@ -318,6 +318,30 @@ async def list_task_runs(task_id: str):
         session.close()
 
 
+@app.post("/api/runs/{run_id}/stop")
+async def stop_run(run_id: str):
+    """Force-stop an active run by killing the agent process."""
+    session, project_svc, task_svc = _get_services()
+    try:
+        run_svc = RunService(session)
+        run = run_svc.get(run_id)
+        if not run:
+            raise HTTPException(status_code=404, detail="Run not found")
+        if run.completed_at:
+            raise HTTPException(status_code=400, detail="Run is already completed")
+
+        task = task_svc.get(run.task_id)
+        project = project_svc.get(run.project_id) if run.project_id else None
+        killed = False
+        if task and project and task.worktree_branch:
+            killed = AgentService.kill_agent(project.path, task.worktree_branch)
+
+        run_svc.mark_completed(run_id, outcome="cancelled")
+        return {"ok": True, "killed": killed}
+    finally:
+        session.close()
+
+
 @app.delete("/api/runs/{run_id}")
 async def delete_run(run_id: str):
     """Delete a completed task run by ID."""

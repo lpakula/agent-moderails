@@ -310,6 +310,15 @@ function taskView() {
       setTimeout(() => this.logsCopied = false, 2000);
     },
 
+    async forceStopRun(runId) {
+      if (!confirm('Force stop this run? The agent process will be killed.')) return;
+      await API.post(`/api/runs/${runId}/stop`);
+      this.stopLogStream();
+      this.streamingRunId = null;
+      this.runs = await API.get(`/api/tasks/${this.task.id}/runs`);
+      await this.refreshTask(this.task.id);
+    },
+
     async deleteRun(runId) {
       if (!confirm('Delete this run?')) return;
       await API.del(`/api/runs/${runId}`);
