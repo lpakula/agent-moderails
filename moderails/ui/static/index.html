@@ -16,10 +16,20 @@
   <script src="/static/js/views/flow-editor.js"></script>
   <script src="/static/js/views/daemon.js"></script>
   <script src="/static/js/views/queue.js"></script>
+  <script src="/static/js/views/integrations.js"></script>
+  <script src="/static/js/views/agents.js"></script>
   <style>
     [x-cloak] { display: none !important; }
     .sortable-ghost { opacity: 0.4; }
     .sortable-drag { opacity: 0.9; }
+    select {
+      -webkit-appearance: none;
+      appearance: none;
+      padding-right: 2.5rem !important;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 0.75rem center;
+    }
   </style>
 </head>
 <body class="bg-gray-950 text-gray-100 h-screen flex overflow-hidden" x-cloak
@@ -72,6 +82,25 @@
               :class="$store.router.view === 'queue'
                 ? 'bg-gray-800 text-white' : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/50'">
         Queue
+      </button>
+    </nav>
+
+    <!-- Integrations -->
+    <div class="px-3 pt-6 pb-2">
+      <span class="text-[10px] uppercase tracking-widest text-gray-500 font-medium px-1">Integrations</span>
+    </div>
+    <nav class="px-2 space-y-0.5">
+      <button @click="$store.router.navigate('agents')"
+              class="w-full text-left px-3 py-1.5 rounded-lg text-sm transition"
+              :class="$store.router.view === 'agents'
+                ? 'bg-gray-800 text-white' : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/50'">
+        Agents
+      </button>
+      <button @click="$store.router.navigate('integrations')"
+              class="w-full text-left px-3 py-1.5 rounded-lg text-sm transition"
+              :class="$store.router.view === 'integrations'
+                ? 'bg-gray-800 text-white' : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/50'">
+        GitHub
       </button>
     </nav>
 
@@ -207,6 +236,72 @@
         </header>
 
         <div class="p-6">
+          <!-- Project Defaults -->
+          <div class="bg-gray-900 border border-gray-800 rounded-xl p-4 mb-6">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-4 text-sm">
+                <span class="text-gray-400">Defaults:</span>
+                <span class="text-gray-500">Agent:</span>
+                <span class="text-cyan-400 font-mono" x-text="project?.default_agent || 'cursor'"></span>
+                <span class="text-gray-500">Model:</span>
+                <span class="text-cyan-400 font-mono" x-text="project?.default_model || 'not set'"></span>
+                <span class="text-gray-500">Flow:</span>
+                <span class="text-cyan-400 font-mono" x-text="(project?.default_flow_chain || ['default']).join(' → ')"></span>
+              </div>
+              <button @click="showDefaults = !showDefaults; defaultModel = project?.default_model || ''; defaultAgent = project?.default_agent || 'cursor'; defaultFlowChain = [...(project?.default_flow_chain || ['default'])]; defaultAddFlow = ''"
+                      class="text-xs text-blue-400 hover:text-blue-300 transition"
+                      x-text="showDefaults ? 'Cancel' : 'Configure'"></button>
+            </div>
+            <div x-show="showDefaults" class="mt-4 space-y-4 border-t border-gray-800 pt-4">
+              <div>
+                <label class="block text-xs text-gray-500 mb-1">Default Agent</label>
+                <select x-model="defaultAgent"
+                        class="w-full max-w-xs bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  <template x-for="a in agents" :key="a">
+                    <option :value="a" x-text="a"></option>
+                  </template>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs text-gray-500 mb-1">Default Model</label>
+                <select x-model="defaultModel"
+                        class="w-full max-w-xs bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  <option value="">Not set</option>
+                  <template x-for="m in models" :key="m">
+                    <option :value="m" x-text="m"></option>
+                  </template>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs text-gray-500 mb-1">Default Flow Chain</label>
+                <div class="space-y-1 mb-2">
+                  <template x-for="(name, i) in defaultFlowChain" :key="i">
+                    <div class="flex items-center gap-2 bg-gray-800 rounded-lg px-3 py-1.5 max-w-xs">
+                      <span class="text-xs text-gray-500 w-4" x-text="i + 1 + '.'"></span>
+                      <span class="flex-1 text-sm text-cyan-400 font-mono" x-text="name"></span>
+                      <button @click="defaultFlowChain.splice(i, 1)" class="text-gray-600 hover:text-red-400 text-xs">✕</button>
+                    </div>
+                  </template>
+                </div>
+                <div class="flex gap-2 max-w-xs">
+                  <select x-model="defaultAddFlow"
+                          class="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="" disabled selected>Select flow...</option>
+                    <template x-for="f in flows" :key="f.id">
+                      <option :value="f.name" x-text="f.name"></option>
+                    </template>
+                  </select>
+                  <button @click="if (defaultAddFlow) { defaultFlowChain.push(defaultAddFlow); defaultAddFlow = ''; }"
+                          :disabled="!defaultAddFlow"
+                          :class="!defaultAddFlow ? 'opacity-40 cursor-not-allowed' : 'hover:bg-gray-600'"
+                          class="text-xs px-3 py-1.5 bg-gray-700 rounded-lg transition">+ Add</button>
+                </div>
+              </div>
+              <button @click="saveDefaults()"
+                      class="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition">Save Defaults</button>
+            </div>
+          </div>
+
           <!-- Task table -->
           <div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
             <table class="w-full text-sm">
@@ -315,12 +410,38 @@
                 <div class="flex gap-2">
                   <select x-model="addFlowSelect"
                           class="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="" disabled selected>Select flow...</option>
                     <template x-for="f in flows" :key="f.id">
                       <option :value="f.name" x-text="f.name"></option>
                     </template>
                   </select>
-                  <button @click="startChain.push(addFlowSelect)"
-                          class="text-xs px-3 py-1.5 bg-gray-700 hover:bg-gray-600 rounded-lg transition">+ Add</button>
+                  <button @click="if (addFlowSelect) { startChain.push(addFlowSelect); addFlowSelect = ''; }"
+                          :disabled="!addFlowSelect"
+                          :class="!addFlowSelect ? 'opacity-40 cursor-not-allowed' : 'hover:bg-gray-600'"
+                          class="text-xs px-3 py-1.5 bg-gray-700 rounded-lg transition">+ Add</button>
+                </div>
+              </div>
+
+              <!-- Agent + Model selectors -->
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="text-sm text-gray-400 mb-1 block">Agent</label>
+                  <select x-model="startAgent" @change="onAgentChange(startAgent)"
+                          class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <template x-for="a in agents" :key="a">
+                      <option :value="a" x-text="a"></option>
+                    </template>
+                  </select>
+                  <p x-show="agents.length === 0" class="text-xs text-red-400 mt-1">No agents detected in PATH</p>
+                </div>
+                <div>
+                  <label class="text-sm text-gray-400 mb-1 block">Model</label>
+                  <select x-model="startModel"
+                          class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <template x-for="m in models" :key="m">
+                      <option :value="m" x-text="m"></option>
+                    </template>
+                  </select>
                 </div>
               </div>
 
@@ -334,8 +455,8 @@
             <div class="flex justify-end gap-3 mt-6">
               <button @click="startingTask = null"
                       class="px-4 py-2 text-sm text-gray-400 hover:text-gray-200 transition">Cancel</button>
-              <button @click="confirmStart()" :disabled="startChain.length === 0"
-                      :class="startChain.length === 0 ? 'opacity-40 cursor-not-allowed' : 'hover:bg-blue-500'"
+              <button @click="confirmStart()" :disabled="startChain.length === 0 || !startModel || !startAgent"
+                      :class="startChain.length === 0 || !startModel || !startAgent ? 'opacity-40 cursor-not-allowed' : 'hover:bg-blue-500'"
                       class="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg transition">Run</button>
             </div>
           </div>
@@ -506,7 +627,11 @@
                                      x-text="run.prompt"></pre>
                               </details>
                             </div>
-                            <div class="bg-gray-900 border border-gray-800 rounded-lg overflow-y-auto font-mono text-xs p-3 space-y-1 max-h-80">
+                            <div class="bg-gray-900 border border-gray-800 rounded-lg overflow-hidden">
+                              <div class="flex items-center justify-end px-3 py-1.5 border-b border-gray-800">
+                                <button @click="copyLogs()" class="text-[10px] text-gray-500 hover:text-gray-300 transition" x-text="logsCopied ? 'Copied!' : 'Copy logs'"></button>
+                              </div>
+                              <div class="overflow-y-auto font-mono text-xs p-3 space-y-1 max-h-80">
                               <template x-for="(entry, i) in logEntries" :key="i">
                                 <div>
                                   <!-- Regular text entry -->
@@ -542,6 +667,7 @@
                                 </div>
                               </template>
                               <div x-show="logEntries.length === 0" class="text-gray-600 italic">Connecting...</div>
+                              </div>
                             </div>
                           </div>
                         </td>
@@ -581,14 +707,40 @@
                 <div class="flex gap-2">
                   <select x-model="runModalFlowSelect"
                           class="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="" disabled selected>Select flow...</option>
                     <template x-for="f in $store.app.flows" :key="f.id">
                       <option :value="f.name" x-text="f.name"></option>
                     </template>
                   </select>
-                  <button @click="runModalChain.push(runModalFlowSelect)"
-                          class="text-xs px-3 py-1.5 bg-gray-700 hover:bg-gray-600 rounded-lg transition">+ Add</button>
+                  <button @click="if (runModalFlowSelect) { runModalChain.push(runModalFlowSelect); runModalFlowSelect = ''; }"
+                          :disabled="!runModalFlowSelect"
+                          :class="!runModalFlowSelect ? 'opacity-40 cursor-not-allowed' : 'hover:bg-gray-600'"
+                          class="text-xs px-3 py-1.5 bg-gray-700 rounded-lg transition">+ Add</button>
                 </div>
               </div>
+              <!-- Agent + Model selectors -->
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="text-sm text-gray-400 mb-1 block">Agent</label>
+                  <select x-model="runModalAgent" @change="onRunModalAgentChange(runModalAgent)"
+                          class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <template x-for="a in runModalAgents" :key="a">
+                      <option :value="a" x-text="a"></option>
+                    </template>
+                  </select>
+                  <p x-show="runModalAgents.length === 0" class="text-xs text-red-400 mt-1">No agents detected in PATH</p>
+                </div>
+                <div>
+                  <label class="text-sm text-gray-400 mb-1 block">Model</label>
+                  <select x-model="runModalModel"
+                          class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <template x-for="m in runModalModels" :key="m">
+                      <option :value="m" x-text="m"></option>
+                    </template>
+                  </select>
+                </div>
+              </div>
+
               <div x-show="!runModalIsFirstRun">
                 <label class="block text-sm text-gray-400 mb-1">Prompt</label>
                 <textarea x-model="runModalPrompt" rows="4"
@@ -599,8 +751,8 @@
             <div class="flex justify-end gap-3 mt-6">
               <button @click="runModal = false"
                       class="px-4 py-2 text-sm text-gray-400 hover:text-gray-200 transition">Cancel</button>
-              <button @click="submitRunModal()" :disabled="runModalChain.length === 0"
-                      :class="runModalChain.length === 0 ? 'opacity-40 cursor-not-allowed' : 'hover:bg-blue-500'"
+              <button @click="submitRunModal()" :disabled="runModalChain.length === 0 || !runModalModel || !runModalAgent"
+                      :class="runModalChain.length === 0 || !runModalModel || !runModalAgent ? 'opacity-40 cursor-not-allowed' : 'hover:bg-blue-500'"
                       class="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg transition">Run</button>
             </div>
           </div>
@@ -892,8 +1044,113 @@
       </div>
     </template>
 
+    <!-- Agents View -->
+    <template x-if="$store.router.view === 'agents'">
+      <div class="flex-1 overflow-y-auto p-6" x-data="agentsView()" x-init="init()">
+        <div class="mb-6">
+          <h2 class="text-xl font-semibold mb-2">Agents</h2>
+          <p class="text-sm text-gray-400">Coding agents that moderails can orchestrate. Each agent is a CLI tool that receives a prompt and executes tasks autonomously in your codebase. <br>Only agents detected in your PATH are available for selection when starting a run.</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <template x-for="a in agentList" :key="a.key">
+            <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+              <div class="flex items-center justify-between mb-3">
+                <h3 class="font-medium text-white" x-text="a.label"></h3>
+                <span class="text-[10px] uppercase px-1.5 py-0.5 rounded"
+                      :class="a.available ? 'bg-green-900/50 text-green-300' : 'bg-red-900/50 text-red-300'"
+                      x-text="a.available ? 'ready' : 'not found'"></span>
+              </div>
+
+              <div class="mb-3">
+                <label class="block text-[10px] uppercase tracking-wide text-gray-500 mb-1">Command</label>
+                <div class="bg-gray-950 border border-gray-800 rounded-lg px-3 py-2 font-mono text-sm text-cyan-400" x-text="a.command"></div>
+              </div>
+
+              <div class="space-y-1.5 text-xs mb-3">
+                <div class="flex items-center gap-2">
+                  <span class="w-1.5 h-1.5 rounded-full" :class="a.binary_path ? 'bg-green-400' : 'bg-red-400'"></span>
+                  <span class="text-gray-400" x-text="a.binary + ' binary'"></span>
+                  <span class="text-gray-600 font-mono ml-auto truncate max-w-[180px]"
+                        :title="a.binary_path || 'not found'"
+                        x-text="a.binary_path || 'not found'"></span>
+                </div>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+    </template>
+
+    <!-- Integrations View -->
+    <template x-if="$store.router.view === 'integrations'">
+      <div class="flex-1 overflow-y-auto p-6" x-data="integrationsView()" x-init="init()" @destroy.window="destroy && destroy()">
+        <div class="mb-6">
+          <h2 class="text-xl font-semibold mb-2">GitHub Integration</h2>
+          <p class="text-sm text-gray-400">Connect your GitHub repositories to trigger agent runs from issue comments. <br>When someone comments <code class="text-gray-300 bg-gray-800 px-1 rounded">@moderails</code> on an issue, moderails creates a task, queues a run, and posts results back to the issue. Optionally override defaults with <code class="text-gray-300 bg-gray-800 px-1 rounded">@moderails --model [name] --flow [flow1,flow2] --agent [name]</code>.</p>
+        </div>
+
+        <!-- Token section -->
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-5 mb-6">
+          <h3 class="text-sm font-medium text-gray-300 mb-3">GitHub Token</h3>
+          <div class="flex items-center gap-3 mb-3">
+            <span class="w-2 h-2 rounded-full" :class="hasToken ? 'bg-green-400' : 'bg-red-400'"></span>
+            <span class="text-sm" :class="hasToken ? 'text-green-400' : 'text-red-400'"
+                  x-text="hasToken ? 'Token configured' : 'No token'"></span>
+            <span x-show="hasToken" class="text-xs text-gray-600 font-mono" x-text="maskedToken"></span>
+          </div>
+          <div class="flex gap-2">
+            <input x-model="token" type="password" placeholder="ghp_... or paste token"
+                   class="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <button @click="saveToken()" :disabled="!token"
+                    :class="!token ? 'opacity-40 cursor-not-allowed' : 'hover:bg-blue-500'"
+                    class="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg transition">Save</button>
+          </div>
+          <p x-show="tokenSaved" class="text-xs text-green-400 mt-2">Token saved successfully</p>
+          <p class="text-xs text-gray-600 mt-2">Token requires <code class="text-gray-500">repo</code> scope. Generate one at <code class="text-gray-500">github.com/settings/tokens</code>.</p>
+        </div>
+
+        <!-- Projects table -->
+        <div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="border-b border-gray-800 text-gray-400 text-xs uppercase tracking-wide">
+                <th class="px-4 py-3 text-left">Project</th>
+                <th class="px-4 py-3 text-left">Repository</th>
+                <th class="px-4 py-3 text-center">Polling</th>
+                <th class="px-4 py-3 text-left">Last Polled</th>
+                <th class="px-4 py-3 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-for="p in projects" :key="p.id">
+                <tr class="border-b border-gray-800/50 hover:bg-gray-800/20 transition">
+                  <td class="px-4 py-3 font-medium text-gray-200" x-text="p.name"></td>
+                  <td class="px-4 py-3 text-xs font-mono text-cyan-400" x-text="getRepo(p.id) || '-'"></td>
+                  <td class="px-4 py-3 text-center">
+                    <button @click="toggleEnabled(p.id)"
+                            class="w-10 h-5 rounded-full transition relative"
+                            :class="isEnabled(p.id) ? 'bg-green-600' : 'bg-gray-700'">
+                      <span class="absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all"
+                            :class="isEnabled(p.id) ? 'left-5' : 'left-0.5'"></span>
+                    </button>
+                  </td>
+                  <td class="px-4 py-3 text-xs text-gray-500" x-text="getLastPolled(p.id)"></td>
+                  <td class="px-4 py-3 text-right">
+                    <button @click="detectRepo(p.id)"
+                            class="text-xs text-blue-400 hover:text-blue-300 transition">Detect Repo</button>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+          <div x-show="projects.length === 0" class="px-4 py-8 text-center text-gray-600">No projects registered</div>
+        </div>
+      </div>
+    </template>
+
     <!-- Empty state (no view selected) -->
-    <template x-if="!['dashboard','project','task','flows','flow-editor','queue'].includes($store.router.view)">
+    <template x-if="!['dashboard','project','task','flows','flow-editor','queue','agents','integrations'].includes($store.router.view)">
       <div class="flex-1 flex items-center justify-center">
         <p class="text-gray-500 text-lg">Select a view from the sidebar</p>
       </div>

@@ -7,8 +7,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
-from ..config import load_system_config
+from ..config import get_github_token, load_system_config
 from ..db.database import get_session, reset_engine
+from ..db.models import Integration
 from .agent import AgentService
 from .project import ProjectService
 from .run import RunService
@@ -57,6 +58,8 @@ class Daemon:
 
             for project in project_svc.list_all():
                 self._process_project(project, task_svc, run_svc)
+
+            self._poll_integrations(session)
         finally:
             session.close()
 
@@ -89,9 +92,65 @@ class Daemon:
             logger.info("Task %s run %s finished (outcome=%s)", task.id, run.id, outcome)
             run_svc.mark_completed(run.id, outcome=outcome)
 
+            if task.github_issue_number and task.integration:
+                self._post_github_result(task, run, project)
+
         pending = run_svc.get_pending(project.id)
         if pending:
             self._run_task(pending, task_svc, run_svc, project)
+
+    def _poll_integrations(self, session) -> None:
+        """Poll all enabled GitHub integrations for @moderails comments."""
+        token = get_github_token()
+        if not token:
+            return
+
+        integrations = (
+            session.query(Integration)
+            .filter_by(provider="github", enabled=True)
+            .all()
+        )
+        if not integrations:
+            return
+
+        from .github import GitHubService
+        gh = GitHubService(token)
+        try:
+            for integration in integrations:
+                try:
+                    count = gh.poll_integration(integration, session)
+                    if count:
+                        logger.info("GitHub: created %d run(s) for %s", count, integration.project.name)
+                except Exception:
+                    logger.exception("Error polling GitHub integration %s", integration.id)
+        finally:
+            gh.close()
+
+    def _post_github_result(self, task, run, project) -> None:
+        """Post run result back to the GitHub issue."""
+        token = get_github_token()
+        if not token:
+            return
+
+        config = task.integration.get_config()
+        repo = config.get("repo", "")
+        if not repo:
+            return
+
+        from .github import GitHubService
+        gh = GitHubService(token)
+        try:
+            gh.post_run_result(
+                repo=repo,
+                task=task,
+                run_id=run.id,
+                summary=run.summary or "",
+                branch=task.worktree_branch or "",
+            )
+        except Exception:
+            logger.exception("Error posting GitHub result for run %s", run.id)
+        finally:
+            gh.close()
 
     def _run_task(self, run, task_svc: TaskService, run_svc: RunService, project) -> None:
         """Set up worktree and launch agent for a pending TaskRun."""
@@ -133,6 +192,8 @@ class Daemon:
                 task_description=run.user_prompt or task.description,
                 task_type=task.type.value,
                 execution_history=execution_history,
+                model=run.model or "",
+                agent=run.agent or "cursor",
             )
             if launched:
                 if prompt_content:

@@ -15,7 +15,12 @@ function taskView() {
     runModalChain: [],
     runModalFlowSelect: '',
     runModalPrompt: '',
+    runModalModel: '',
+    runModalModels: [],
+    runModalAgent: '',
+    runModalAgents: [],
     runModalIsFirstRun: false,
+    logsCopied: false,
 
     async init() {
       const tid = Alpine.store('router').params.taskId;
@@ -295,6 +300,16 @@ function taskView() {
       }
     },
 
+    copyLogs() {
+      const text = this.logEntries.map(e => {
+        if (e.type === 'output') return (e.lines || []).join('\n');
+        return e.text || '';
+      }).join('\n');
+      navigator.clipboard.writeText(text);
+      this.logsCopied = true;
+      setTimeout(() => this.logsCopied = false, 2000);
+    },
+
     async deleteRun(runId) {
       if (!confirm('Delete this run?')) return;
       await API.del(`/api/runs/${runId}`);
@@ -306,21 +321,51 @@ function taskView() {
       this.runs = await API.get(`/api/tasks/${this.task.id}/runs`);
     },
 
-    openRunModal() {
+    async openRunModal() {
       const flows = Alpine.store('app').flows;
-      this.runModalChain = [];
-      this.runModalFlowSelect = flows[0]?.name || 'default';
+      this.runModalFlowSelect = '';
       this.runModalPrompt = '';
       this.runModalIsFirstRun = this.runs.length === 0;
+
+      try {
+        this.runModalAgents = await API.get('/api/agents');
+        const project = this.task ? await API.get(`/api/projects/${this.task.project_id}`) : null;
+        this.runModalChain = [...(project?.default_flow_chain || ['default'])];
+        this.runModalAgent = this.runModalAgents.includes(project?.default_agent) ? project.default_agent : (this.runModalAgents[0] || 'cursor');
+        await this.loadRunModalModels(this.runModalAgent);
+        this.runModalModel = project?.default_model || this.runModalModels[0] || '';
+      } catch (e) {
+        this.runModalChain = [];
+        this.runModalModel = '';
+        this.runModalAgent = '';
+      }
+
       this.runModal = true;
     },
 
+    async loadRunModalModels(agent) {
+      try {
+        this.runModalModels = await API.get(`/api/models?agent=${encodeURIComponent(agent)}`);
+        if (this.runModalModels.length && !this.runModalModels.includes(this.runModalModel)) {
+          this.runModalModel = this.runModalModels[0];
+        }
+      } catch (e) {
+        this.runModalModels = [];
+      }
+    },
+
+    async onRunModalAgentChange(agent) {
+      await this.loadRunModalModels(agent);
+    },
+
     async submitRunModal() {
-      if (!this.task || this.runModalChain.length === 0) return;
+      if (!this.task || this.runModalChain.length === 0 || !this.runModalModel || !this.runModalAgent) return;
       await API.post(`/api/tasks/${this.task.id}/start`, {
         flow: this.runModalChain[0],
         flow_chain: this.runModalChain,
         user_prompt: this.runModalPrompt,
+        model: this.runModalModel,
+        agent: this.runModalAgent,
       });
       this.runModal = false;
       this.runs = await API.get(`/api/tasks/${this.task.id}/runs`);

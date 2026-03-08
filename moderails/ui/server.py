@@ -10,10 +10,12 @@ from fastapi.responses import FileResponse, StreamingResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
+from ..config import AGENT_REGISTRY, KNOWN_AGENTS, KNOWN_MODELS, get_github_token, load_system_config, save_system_config
 from ..db.database import get_session, reset_engine
-from ..db.models import TaskType
+from ..db.models import Integration, TaskType
 from ..services.agent import AgentService
 from ..services.flow import FlowService
+from ..services.github import GitHubService
 from ..services.project import ProjectService
 from ..services.run import RunService
 from ..services.task import TaskService
@@ -72,6 +74,8 @@ class TaskStartBody(BaseModel):
     flow: str = "default"
     flow_chain: list[str] = []
     user_prompt: str = ""
+    model: str = ""
+    agent: str = "cursor"
 
 
 # --- Helpers ---
@@ -158,6 +162,9 @@ async def get_project(project_id: str):
 
 class ProjectUpdate(BaseModel):
     name: Optional[str] = None
+    default_model: Optional[str] = None
+    default_agent: Optional[str] = None
+    default_flow_chain: Optional[list[str]] = None
 
 
 @app.patch("/api/projects/{project_id}")
@@ -170,6 +177,12 @@ async def update_project(project_id: str, body: ProjectUpdate):
         updates = {}
         if body.name is not None:
             updates["name"] = body.name
+        if body.default_model is not None:
+            updates["default_model"] = body.default_model
+        if body.default_agent is not None:
+            updates["default_agent"] = body.default_agent
+        if body.default_flow_chain is not None:
+            updates["default_flow_chain"] = json.dumps(body.default_flow_chain)
         if updates:
             project = project_svc.update(project_id, **updates)
         return project.to_dict()
@@ -279,7 +292,9 @@ async def start_task(task_id: str, body: TaskStartBody):
         chain = body.flow_chain if body.flow_chain else [body.flow]
         run_svc.enqueue(task.project_id, task_id, flow_name=chain[0],
                         user_prompt=body.user_prompt or task.description or "",
-                        flow_chain=chain)
+                        flow_chain=chain,
+                        model=body.model,
+                        agent=body.agent)
 
         project = project_svc.get(task.project_id)
         task = task_svc.get(task_id)
@@ -636,6 +651,171 @@ async def import_flows(file: UploadFile = File(...)):
         raise HTTPException(status_code=400, detail="Invalid JSON")
     finally:
         session.close()
+
+
+# --- Integration endpoints ---
+
+class IntegrationCreate(BaseModel):
+    provider: str
+    config: dict = {}
+
+
+class IntegrationUpdate(BaseModel):
+    enabled: Optional[bool] = None
+    config: Optional[dict] = None
+
+
+@app.get("/api/projects/{project_id}/integrations")
+async def list_integrations(project_id: str):
+    session, project_svc, _ = _get_services()
+    try:
+        project = project_svc.get(project_id)
+        if not project:
+            raise HTTPException(status_code=404, detail="Project not found")
+        integrations = (
+            session.query(Integration)
+            .filter_by(project_id=project_id)
+            .all()
+        )
+        return [i.to_dict() for i in integrations]
+    finally:
+        session.close()
+
+
+@app.post("/api/projects/{project_id}/integrations")
+async def create_integration(project_id: str, body: IntegrationCreate):
+    session, project_svc, _ = _get_services()
+    try:
+        project = project_svc.get(project_id)
+        if not project:
+            raise HTTPException(status_code=404, detail="Project not found")
+        integration = Integration(
+            project_id=project_id,
+            provider=body.provider,
+            config=json.dumps(body.config),
+        )
+        session.add(integration)
+        session.commit()
+        return integration.to_dict()
+    finally:
+        session.close()
+
+
+@app.patch("/api/integrations/{integration_id}")
+async def update_integration(integration_id: str, body: IntegrationUpdate):
+    session, _, _ = _get_services()
+    try:
+        integration = session.query(Integration).filter_by(id=integration_id).first()
+        if not integration:
+            raise HTTPException(status_code=404, detail="Integration not found")
+        if body.enabled is not None:
+            integration.enabled = body.enabled
+        if body.config is not None:
+            integration.config = json.dumps(body.config)
+        session.commit()
+        return integration.to_dict()
+    finally:
+        session.close()
+
+
+@app.delete("/api/integrations/{integration_id}")
+async def delete_integration(integration_id: str):
+    session, _, _ = _get_services()
+    try:
+        integration = session.query(Integration).filter_by(id=integration_id).first()
+        if not integration:
+            raise HTTPException(status_code=404, detail="Integration not found")
+        session.delete(integration)
+        session.commit()
+        return {"ok": True}
+    finally:
+        session.close()
+
+
+@app.post("/api/integrations/{integration_id}/detect-repo")
+async def detect_repo(integration_id: str):
+    session, project_svc, _ = _get_services()
+    try:
+        integration = session.query(Integration).filter_by(id=integration_id).first()
+        if not integration:
+            raise HTTPException(status_code=404, detail="Integration not found")
+        project = project_svc.get(integration.project_id)
+        if not project:
+            raise HTTPException(status_code=404, detail="Project not found")
+        repo = GitHubService.get_repo_from_remote(project.path)
+        if not repo:
+            raise HTTPException(status_code=400, detail="Could not detect GitHub repo from git remote")
+        config = integration.get_config()
+        config["repo"] = repo
+        integration.config = json.dumps(config)
+        session.commit()
+        return {"repo": repo, "integration": integration.to_dict()}
+    finally:
+        session.close()
+
+
+# --- GitHub config ---
+
+@app.get("/api/github/status")
+async def github_status():
+    token = get_github_token()
+    return {"available": token is not None}
+
+
+class GitHubTokenBody(BaseModel):
+    token: str
+
+
+@app.patch("/api/config/github")
+async def update_github_config(body: GitHubTokenBody):
+    config = load_system_config()
+    if "github" not in config:
+        config["github"] = {}
+    config["github"]["token"] = body.token
+    save_system_config(config)
+    return {"ok": True}
+
+
+@app.get("/api/config/github")
+async def get_github_config():
+    config = load_system_config()
+    token = config.get("github", {}).get("token", "")
+    has_token = bool(token)
+    masked = token[:4] + "..." + token[-4:] if len(token) > 8 else ("****" if token else "")
+    return {"has_token": has_token, "masked_token": masked}
+
+
+@app.get("/api/agents")
+async def list_agents():
+    """Return only agents whose binary is found in PATH (ready to use)."""
+    import shutil
+    return [name for name in KNOWN_AGENTS if shutil.which(AGENT_REGISTRY[name]["binary"])]
+
+
+@app.get("/api/agents/status")
+async def agents_status():
+    """Return availability status for all known agents."""
+    import shutil
+    result = {}
+    for name, reg in AGENT_REGISTRY.items():
+        binary_path = shutil.which(reg["binary"])
+        result[name] = {
+            "label": reg["label"],
+            "available": binary_path is not None,
+            "binary": reg["binary"],
+            "binary_path": binary_path,
+            "command": reg["command"],
+        }
+    return result
+
+
+
+@app.get("/api/models")
+async def list_models(agent: Optional[str] = None):
+    """Return models for a specific agent, or all models if no agent specified."""
+    if agent and agent in AGENT_REGISTRY:
+        return AGENT_REGISTRY[agent]["models"]
+    return KNOWN_MODELS
 
 
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")

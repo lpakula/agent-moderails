@@ -1,6 +1,7 @@
-"""Agent launcher -- writes prompt and launches Cursor agent.
+"""Agent launcher -- writes prompt and launches coding agents.
 
-Agent output is streamed as NDJSON to .moderails/agent-{run_id}.log in the worktree.
+Supports multiple agent backends (Cursor, Claude Code, Codex).
+Agent output is streamed to .moderails/agent-{run_id}.log in the worktree.
 Agent PID is stored in .moderails/agent.pid for liveness checks.
 """
 
@@ -13,6 +14,7 @@ import time
 from pathlib import Path
 from typing import Optional
 
+from ..config import AGENT_REGISTRY
 from .context import ContextService
 
 logger = logging.getLogger("moderails.agent")
@@ -38,8 +40,10 @@ class AgentService:
         task_description: str = "",
         task_type: str = "feature",
         execution_history: Optional[list[dict]] = None,
+        model: str = "",
+        agent: str = "cursor",
     ) -> tuple[bool, str, str]:
-        """Write prompt in the worktree, then launch Cursor agent.
+        """Write prompt in the worktree, then launch the selected agent.
 
         Returns (success, prompt_content, log_path).
         """
@@ -79,7 +83,10 @@ class AgentService:
 
         log_file = wt_moderails / f"agent-{run_id}.log"
         pid_file = wt_moderails / "agent.pid"
-        launched = self._launch_agent(self.worktree_path, prompt_md, log_file, pid_file)
+        launched = self._launch_agent(
+            self.worktree_path, prompt_md, log_file, pid_file,
+            model=model, agent=agent,
+        )
         return launched, prompt_content, str(log_file)
 
     def _copy_cursor_rule(self) -> None:
@@ -110,15 +117,22 @@ class AgentService:
 
     def _launch_agent(
         self, directory: Path, prompt_file: Path, log_file: Path, pid_file: Path,
+        model: str = "", agent: str = "cursor",
     ) -> bool:
-        """Launch Cursor agent with NDJSON output streamed to a log file."""
+        """Launch the selected agent backend with output streamed to a log file."""
+        reg = AGENT_REGISTRY.get(agent)
+        if not reg:
+            logger.error("Unknown agent backend: %s", agent)
+            return False
+
+        prompt_content = prompt_file.read_text()
+
         try:
+            cmd = self._build_agent_command(reg, prompt_file, prompt_content, model)
+
             fh = open(log_file, "w")
             proc = subprocess.Popen(
-                [
-                    "agent", "-p", "-f", str(prompt_file),
-                    "--output-format", "stream-json",
-                ],
+                cmd,
                 cwd=str(directory),
                 stdout=fh,
                 stderr=subprocess.STDOUT,
@@ -126,7 +140,40 @@ class AgentService:
             pid_file.write_text(str(proc.pid))
             return True
         except FileNotFoundError:
+            logger.error("Agent binary '%s' not found in PATH", reg["binary"])
             return False
+
+    @staticmethod
+    def _build_agent_command(reg: dict, prompt_file: Path, prompt_content: str,
+                             model: str) -> list[str]:
+        """Build the CLI command list for a given agent backend."""
+        binary = reg["binary"]
+        mode = reg["prompt_mode"]
+
+        if binary == "agent":
+            cmd = ["agent", "-p", "-f", str(prompt_file),
+                   "--output-format", "stream-json"]
+            if model:
+                cmd.extend(["--model", model])
+            return cmd
+
+        if binary == "claude":
+            cmd = ["claude", "-p", prompt_content, "--output-format", "json"]
+            if model:
+                cmd.extend(["--model", model])
+            return cmd
+
+        if binary == "codex":
+            cmd = ["codex", "exec", "--json", prompt_content]
+            return cmd
+
+        # Fallback for unknown but registered agents
+        cmd = [binary]
+        if mode == "file":
+            cmd.extend(["-f", str(prompt_file)])
+        elif mode == "arg":
+            cmd.append(prompt_content)
+        return cmd
 
     @staticmethod
     def kill_agent(project_path: str, worktree_branch: str) -> bool:

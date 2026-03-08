@@ -6,15 +6,24 @@ function projectView() {
     project: null,
     tasks: [],
     flows: [],
+    models: [],
+    agents: [],
     showCreate: false,
     editingName: false,
     editName: '',
     newTask: { title: '', description: '', type: 'feature' },
     startingTask: null,
     startChain: ['default'],
-    addFlowSelect: 'default',
+    addFlowSelect: '',
     startPrompt: '',
+    startModel: '',
+    startAgent: '',
     isFirstRun: false,
+    showDefaults: false,
+    defaultModel: '',
+    defaultAgent: 'cursor',
+    defaultFlowChain: [],
+    defaultAddFlow: '',
 
     async init() {
       const pid = Alpine.store('router').params.projectId;
@@ -29,13 +38,31 @@ function projectView() {
 
     async load(pid) {
       try {
-        [this.project, this.tasks, this.flows] = await Promise.all([
+        [this.project, this.tasks, this.flows, this.agents] = await Promise.all([
           API.get(`/api/projects/${pid}`),
           API.get(`/api/projects/${pid}/tasks`),
           API.get('/api/flows'),
+          API.get('/api/agents'),
         ]);
+        if (this.project && !this.defaultModel) {
+          this.defaultModel = this.project.default_model || '';
+          this.defaultAgent = this.project.default_agent || 'cursor';
+          this.defaultFlowChain = this.project.default_flow_chain || ['default'];
+        }
+        await this.loadModelsForAgent(this.startAgent || this.project?.default_agent || 'cursor');
       } catch (e) {
         console.error('Project load error:', e);
+      }
+    },
+
+    async loadModelsForAgent(agent) {
+      try {
+        this.models = await API.get(`/api/models?agent=${encodeURIComponent(agent)}`);
+        if (this.models.length && !this.models.includes(this.startModel)) {
+          this.startModel = this.models[0];
+        }
+      } catch (e) {
+        this.models = [];
       }
     },
 
@@ -86,22 +113,42 @@ function projectView() {
       Alpine.store('router').navigate('dashboard');
     },
 
-    openStartDialog(task) {
+    async openStartDialog(task) {
       this.startingTask = task.id;
-      this.startChain = [];
-      this.addFlowSelect = this.flows[0]?.name || 'default';
+      this.startChain = [...(this.project?.default_flow_chain || ['default'])];
+      this.addFlowSelect = '';
       this.startPrompt = '';
+      this.startAgent = this.agents.includes(this.project?.default_agent) ? this.project.default_agent : (this.agents[0] || 'cursor');
+      await this.loadModelsForAgent(this.startAgent);
+      this.startModel = this.project?.default_model || this.models[0] || '';
       this.isFirstRun = (task.run_count || 0) === 0;
     },
 
+    async onAgentChange(agent) {
+      await this.loadModelsForAgent(agent);
+    },
+
     async confirmStart() {
-      if (!this.startingTask || this.startChain.length === 0) return;
+      if (!this.startingTask || this.startChain.length === 0 || !this.startModel || !this.startAgent) return;
       await API.post(`/api/tasks/${this.startingTask}/start`, {
         flow: this.startChain[0],
         flow_chain: this.startChain,
         user_prompt: this.startPrompt,
+        model: this.startModel,
+        agent: this.startAgent,
       });
       this.startingTask = null;
+      await this.load(this.project.id);
+    },
+
+    async saveDefaults() {
+      if (!this.project) return;
+      await API.patch(`/api/projects/${this.project.id}`, {
+        default_model: this.defaultModel,
+        default_agent: this.defaultAgent,
+        default_flow_chain: this.defaultFlowChain,
+      });
+      this.showDefaults = false;
       await this.load(this.project.id);
     },
 

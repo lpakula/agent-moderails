@@ -16,6 +16,57 @@ SYSTEM_CONFIG = SYSTEM_DIR / "config.toml"
 PROJECT_DIR = ".moderails"
 
 
+KNOWN_AGENTS = [
+    "cursor",
+    "claude-code",
+    "codex",
+]
+
+AGENT_REGISTRY = {
+    "cursor": {
+        "label": "Cursor",
+        "binary": "agent",
+        "command": "agent -p -f \"<prompt>\"",
+        "prompt_mode": "file",
+        "output_format": "stream-json",
+        "models": [
+            "auto",
+            "sonnet-4.6-thinking", "sonnet-4.6",
+            "sonnet-4.5-thinking", "sonnet-4.5",
+            "opus-4.6-thinking", "opus-4.6",
+            "opus-4.5-thinking", "opus-4.5",
+            "gemini-3.1-pro", "gemini-3-pro", "gemini-3-flash",
+            "composer-1.5", "composer-1",
+            "gpt-5.2", "grok",
+        ],
+    },
+    "claude-code": {
+        "label": "Claude Code",
+        "binary": "claude",
+        "command": "claude -p \"<prompt>\"",
+        "prompt_mode": "arg",
+        "output_format": "json",
+        "models": [
+            "default",
+            "sonnet", "opus", "haiku",
+            "claude-sonnet-4.6", "claude-opus-4.6",
+            "claude-sonnet-4.5", "claude-opus-4.5",
+        ],
+    },
+    "codex": {
+        "label": "Codex",
+        "binary": "codex",
+        "command": "codex exec --json \"<prompt>\"",
+        "prompt_mode": "arg",
+        "output_format": "json",
+        "models": [
+            "gpt-5.4", "gpt-5.3-codex-spark",
+        ],
+    },
+}
+
+KNOWN_MODELS = list({m for reg in AGENT_REGISTRY.values() for m in reg["models"]})
+
 DEFAULT_CONFIG = {
     "daemon": {
         "poll_interval_seconds": 30,
@@ -24,6 +75,9 @@ DEFAULT_CONFIG = {
     "ui": {
         "port": 4200,
         "host": "localhost",
+    },
+    "github": {
+        "token": "",
     },
 }
 
@@ -67,6 +121,13 @@ def save_system_config(config: dict[str, Any]) -> Path:
             lines.append("")
     SYSTEM_CONFIG.write_text("\n".join(lines))
     return SYSTEM_CONFIG
+
+
+def get_github_token() -> Optional[str]:
+    """Return a GitHub token from config.toml, or None if not configured."""
+    config = load_system_config()
+    token = config.get("github", {}).get("token", "")
+    return token or None
 
 
 def find_project_dir(start_path: Optional[Path] = None) -> Optional[Path]:

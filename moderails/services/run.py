@@ -14,12 +14,15 @@ class RunService:
         self.session = session
 
     def enqueue(self, project_id: str, task_id: str, flow_name: str = "default",
-                user_prompt: str = "", flow_chain: Optional[list[str]] = None) -> TaskRun:
+                user_prompt: str = "", flow_chain: Optional[list[str]] = None,
+                model: str = "", agent: str = "cursor") -> TaskRun:
         """Create a TaskRun in the queue.
 
         flow_chain is an ordered list of flows to execute in sequence within a single run.
         flow_name is set to the first flow in the chain (or flow_name if chain is empty).
         user_prompt falls back to task.description when not provided.
+        model is the LLM model to use for this run.
+        agent is the agent backend to use (cursor, claude-code, codex).
         """
         task = self.session.query(Task).filter_by(id=task_id).first()
         if not task:
@@ -33,6 +36,8 @@ class RunService:
             task_id=task_id,
             flow_name=active_flow,
             flow_chain=json.dumps(chain),
+            model=model,
+            agent=agent,
             user_prompt=user_prompt or task.description or "",
         )
         self.session.add(run)
