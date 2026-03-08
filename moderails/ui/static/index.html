@@ -15,7 +15,7 @@
   <script src="/static/js/views/flows.js"></script>
   <script src="/static/js/views/flow-editor.js"></script>
   <script src="/static/js/views/daemon.js"></script>
-  <script src="/static/js/views/queue.js"></script>
+  <script src="/static/js/views/history.js"></script>
   <script src="/static/js/views/integrations.js"></script>
   <script src="/static/js/views/agents.js"></script>
   <style>
@@ -72,16 +72,16 @@
       </button>
     </nav>
 
-    <!-- Queue -->
+    <!-- Runs -->
     <div class="px-3 pt-6 pb-2">
       <span class="text-[10px] uppercase tracking-widest text-gray-500 font-medium px-1">Runs</span>
     </div>
     <nav class="px-2 space-y-0.5">
-      <button @click="$store.router.navigate('queue')"
+      <button @click="$store.router.navigate('history')"
               class="w-full text-left px-3 py-1.5 rounded-lg text-sm transition"
-              :class="$store.router.view === 'queue'
+              :class="$store.router.view === 'history'
                 ? 'bg-gray-800 text-white' : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/50'">
-        Queue
+        History
       </button>
     </nav>
 
@@ -1073,39 +1073,205 @@
       </div>
     </template>
 
-    <!-- Queue View -->
-    <template x-if="$store.router.view === 'queue'">
-      <div class="flex-1 overflow-y-auto p-6" x-data="queueView()" x-init="init()" @destroy.window="destroy && destroy()">
+    <!-- History View -->
+    <template x-if="$store.router.view === 'history'">
+      <div class="flex-1 overflow-y-auto p-6" x-data="historyView()" x-init="init()" @destroy.window="destroy && destroy()">
         <div class="flex items-center justify-between mb-6">
-          <h2 class="text-xl font-semibold">Queue</h2>
-          <button @click="refresh()" class="text-xs text-gray-500 hover:text-gray-300 transition">Refresh</button>
+          <h2 class="text-xl font-semibold">History</h2>
+          <div class="flex items-center gap-3">
+            <select x-model="filterStatus" @change="offset = 0"
+                    class="bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="">All statuses</option>
+              <option value="running">Running</option>
+              <option value="queued">Queued</option>
+              <option value="completed">Completed</option>
+              <option value="failed">Failed</option>
+              <option value="cancelled">Cancelled</option>
+              <option value="timeout">Timeout</option>
+            </select>
+            <span class="text-xs text-gray-500" x-text="pageInfo"></span>
+            <button @click="prevPage()" :disabled="!hasPrev"
+                    :class="!hasPrev ? 'opacity-30 cursor-not-allowed' : 'hover:text-gray-200'"
+                    class="text-xs text-gray-500 transition">&larr; Prev</button>
+            <button @click="nextPage()" :disabled="!hasMore"
+                    :class="!hasMore ? 'opacity-30 cursor-not-allowed' : 'hover:text-gray-200'"
+                    class="text-xs text-gray-500 transition">Next &rarr;</button>
+          </div>
         </div>
 
-        <div x-show="queue.length === 0" class="text-center py-12 text-gray-600">Queue is empty</div>
+        <div x-show="loading" class="text-gray-500 text-center py-12">Loading...</div>
+        <div x-show="!loading && runs.length === 0" class="text-center py-12 text-gray-600">No runs found</div>
 
-        <div class="space-y-2">
-          <template x-for="q in queue" :key="q.id">
-            <div @click="$store.router.navigate('task', { taskId: q.task_id })"
-                 class="bg-gray-900 border rounded-xl px-5 py-4 cursor-pointer hover:border-gray-600 transition flex items-center gap-4"
-                 :class="q.started_at ? 'border-yellow-800/50' : 'border-gray-800'">
-              <span class="w-2.5 h-2.5 rounded-full flex-shrink-0"
-                    :class="q.started_at ? 'bg-yellow-400 animate-pulse' : 'bg-blue-400'"></span>
-              <div class="flex-1 min-w-0">
-                <div class="flex items-center gap-3 mb-0.5">
-                  <span class="font-medium text-gray-200 truncate" x-text="q.task_name || q.task_id"></span>
-                  <span class="text-xs px-2 py-0.5 rounded"
-                        :class="q.started_at ? 'bg-yellow-900/50 text-yellow-300' : 'bg-blue-900/50 text-blue-300'"
-                        x-text="q.started_at ? 'executing' : 'pending'"></span>
-                </div>
-                <div class="flex items-center gap-3 text-xs text-gray-500">
-                  <span class="text-cyan-500" x-text="q.flow_name"></span>
-                  <span x-show="q.current_step">&rarr; <span x-text="q.current_step"></span></span>
-                  <span x-show="q.project_name" class="text-gray-600" x-text="q.project_name"></span>
-                </div>
-              </div>
-              <span class="font-mono text-[10px] text-gray-700 flex-shrink-0" x-text="q.task_id"></span>
-            </div>
-          </template>
+        <div x-show="!loading && runs.length > 0" class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="border-b border-gray-800 text-gray-400 text-xs uppercase tracking-wide">
+                <th class="px-4 py-3 text-left w-8"></th>
+                <th class="px-4 py-3 text-left">Status</th>
+                <th class="px-4 py-3 text-left">Task</th>
+                <th class="px-4 py-3 text-left">Project</th>
+                <th class="px-4 py-3 text-left">Flow</th>
+                <th class="px-4 py-3 text-left">Agent / Model</th>
+                <th class="px-4 py-3 text-left">Duration</th>
+                <th class="px-4 py-3 text-left">Date</th>
+                <th class="px-4 py-3 text-right">Actions</th>
+              </tr>
+            </thead>
+            <template x-for="run in filteredRuns()" :key="run.id">
+              <tbody>
+                <tr class="border-b border-gray-800/50 hover:bg-gray-800/20 cursor-pointer transition"
+                    :class="run.status === 'running' ? 'bg-yellow-900/5' : ''"
+                    @click="toggleRun(run.id)">
+                  <td class="px-4 py-3 w-4">
+                    <span class="w-2 h-2 rounded-full inline-block" :class="statusDot(run)"></span>
+                  </td>
+                  <td class="px-4 py-3">
+                    <span class="text-xs px-2 py-0.5 rounded" :class="statusBadge(displayStatus(run))"
+                          x-text="displayStatus(run)"></span>
+                  </td>
+                  <td class="px-4 py-3">
+                    <button @click.stop="goToTask(run.task_id)"
+                            class="text-sm text-gray-200 hover:text-blue-400 transition truncate max-w-[160px] block text-left"
+                            x-text="run.task_name || run.task_id"></button>
+                    <div class="text-[10px] font-mono text-gray-600 mt-0.5" x-text="run.id"></div>
+                  </td>
+                  <td class="px-4 py-3">
+                    <button @click.stop="goToProject(run)"
+                            class="text-xs text-gray-400 hover:text-blue-400 transition truncate max-w-[120px] block text-left"
+                            x-text="run.project_name || run.project_id"></button>
+                  </td>
+                  <td class="px-4 py-3 text-xs text-cyan-400">
+                    <template x-if="run.flow_chain && JSON.parse(run.flow_chain || '[]').length > 1">
+                      <div class="flex flex-wrap gap-1 items-center">
+                        <template x-for="(fn, fi) in JSON.parse(run.flow_chain)" :key="fi">
+                          <span class="flex items-center gap-1">
+                            <span :class="fn === run.flow_name ? 'text-cyan-300 font-semibold' : 'text-gray-500'" x-text="fn"></span>
+                            <span x-show="fi < JSON.parse(run.flow_chain).length - 1" class="text-gray-700">&rarr;</span>
+                          </span>
+                        </template>
+                      </div>
+                    </template>
+                    <template x-if="!run.flow_chain || JSON.parse(run.flow_chain || '[]').length <= 1">
+                      <span x-text="run.flow_name"></span>
+                    </template>
+                  </td>
+                  <td class="px-4 py-3 text-xs text-gray-500">
+                    <span x-text="(run.agent || 'cursor')"></span>
+                    <span class="text-gray-700">/</span>
+                    <span x-text="run.model || '-'"></span>
+                  </td>
+                  <td class="px-4 py-3 text-xs text-gray-500 whitespace-nowrap" x-text="duration(run)"></td>
+                  <td class="px-4 py-3 text-xs text-gray-600 whitespace-nowrap"
+                      x-text="run.created_at ? new Date(run.created_at).toLocaleString() : '-'"></td>
+                  <td class="px-4 py-3 text-right" @click.stop>
+                    <button @click="viewRunLogs(run.id)"
+                            x-show="run.log_path"
+                            class="text-xs text-blue-400 hover:text-blue-300 transition">Logs</button>
+                    <button @click="goToTask(run.task_id)"
+                            class="text-xs text-gray-500 hover:text-gray-300 transition ml-2">Task</button>
+                  </td>
+                </tr>
+                <!-- Expanded row: summary + logs -->
+                <template x-if="expandedRun === run.id">
+                  <tr class="border-b border-gray-800/30">
+                    <td colspan="9" class="px-4 py-4 bg-gray-950/50">
+                      <div x-show="run.user_prompt" class="mb-3">
+                        <div class="text-[10px] uppercase tracking-wide text-gray-600 mb-1">Prompt</div>
+                        <pre class="text-gray-300 text-xs whitespace-pre-wrap font-mono bg-gray-900 rounded-lg p-3 max-h-32 overflow-y-auto"
+                             x-text="run.user_prompt"></pre>
+                      </div>
+                      <div x-show="run.summary" class="mb-3">
+                        <div class="text-[10px] uppercase tracking-wide text-gray-600 mb-1">Summary</div>
+                        <div class="prose prose-invert max-w-none text-gray-300 text-xs leading-relaxed
+                                    [&_h1]:text-base [&_h1]:font-bold [&_h1]:text-white [&_h1]:mt-4 [&_h1]:mb-2
+                                    [&_h2]:text-sm [&_h2]:font-semibold [&_h2]:text-gray-100 [&_h2]:mt-3 [&_h2]:mb-1.5
+                                    [&_h3]:text-xs [&_h3]:font-semibold [&_h3]:text-gray-200 [&_h3]:mt-2.5 [&_h3]:mb-1
+                                    [&_p]:my-1.5 [&_p]:text-gray-300
+                                    [&_ul]:my-1.5 [&_ul]:pl-4 [&_ul]:space-y-0.5
+                                    [&_ol]:my-1.5 [&_ol]:pl-4 [&_ol]:space-y-0.5
+                                    [&_li]:text-gray-300
+                                    [&_code]:bg-gray-800 [&_code]:text-cyan-300 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-[11px] [&_code]:font-mono
+                                    [&_pre]:bg-gray-800 [&_pre]:border [&_pre]:border-gray-700 [&_pre]:rounded-lg [&_pre]:p-3 [&_pre]:my-2 [&_pre]:overflow-x-auto
+                                    [&_pre_code]:bg-transparent [&_pre_code]:text-green-300 [&_pre_code]:p-0 [&_pre_code]:text-[11px]
+                                    [&_strong]:text-gray-100 [&_strong]:font-semibold
+                                    [&_a]:text-blue-400 [&_a]:underline"
+                             x-html="marked.parse(run.summary || '')"></div>
+                      </div>
+                      <!-- Logs viewer -->
+                      <div x-show="streamingRunId === run.id">
+                        <div class="flex items-center justify-between mb-2">
+                          <span class="text-[10px] uppercase tracking-wide text-gray-600 flex items-center gap-2">
+                            Agent Log
+                            <span x-show="logStreaming" class="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></span>
+                          </span>
+                          <div class="flex items-center gap-3">
+                            <button @click.stop="copyLogs()" class="text-[10px] text-gray-500 hover:text-gray-300 transition" x-text="logsCopied ? 'Copied!' : 'Copy logs'"></button>
+                            <button @click.stop="stopLogStream(); streamingRunId = null"
+                                    class="text-xs text-gray-500 hover:text-gray-300 transition">Close</button>
+                          </div>
+                        </div>
+                        <div class="bg-gray-900 border border-gray-800 rounded-lg overflow-hidden">
+                          <div class="overflow-y-auto font-mono text-xs p-3 space-y-1 max-h-80">
+                            <template x-for="(entry, i) in logEntries" :key="i">
+                              <div>
+                                <div x-show="entry.type !== 'output'" :class="entry.cls">
+                                  <span x-text="entry.text"></span>
+                                </div>
+                                <div x-show="entry.type === 'output'" class="mt-0.5">
+                                  <template x-if="!entry.expanded">
+                                    <div>
+                                      <template x-for="(line, li) in entry.lines.slice(0, 8)" :key="li">
+                                        <div class="text-gray-500 pl-4" x-text="line"></div>
+                                      </template>
+                                      <button x-show="entry.lines.length > 8"
+                                              @click="entry.expanded = true"
+                                              class="text-gray-600 hover:text-gray-400 pl-4 mt-0.5 underline underline-offset-2">
+                                        + <span x-text="entry.lines.length - 8"></span> more lines
+                                      </button>
+                                    </div>
+                                  </template>
+                                  <template x-if="entry.expanded">
+                                    <div>
+                                      <template x-for="(line, li) in entry.lines" :key="li">
+                                        <div class="text-gray-500 pl-4" x-text="line"></div>
+                                      </template>
+                                      <button @click="entry.expanded = false"
+                                              class="text-gray-600 hover:text-gray-400 pl-4 mt-0.5 underline underline-offset-2">
+                                        &uarr; Collapse
+                                      </button>
+                                    </div>
+                                  </template>
+                                </div>
+                              </div>
+                            </template>
+                            <div x-show="logEntries.length === 0" class="text-gray-600 italic">Connecting...</div>
+                          </div>
+                        </div>
+                      </div>
+                      <!-- Quick action to open logs if not streaming yet -->
+                      <div x-show="streamingRunId !== run.id && run.log_path" class="mt-2">
+                        <button @click.stop="viewRunLogs(run.id)"
+                                class="text-xs text-blue-400 hover:text-blue-300 transition">View Logs</button>
+                      </div>
+                    </td>
+                  </tr>
+                </template>
+              </tbody>
+            </template>
+          </table>
+        </div>
+
+        <!-- Pagination footer -->
+        <div x-show="total > limit" class="flex items-center justify-between mt-4">
+          <span class="text-xs text-gray-500" x-text="pageInfo"></span>
+          <div class="flex gap-2">
+            <button @click="prevPage()" :disabled="!hasPrev"
+                    :class="!hasPrev ? 'opacity-30 cursor-not-allowed' : 'hover:bg-gray-700'"
+                    class="text-xs px-3 py-1.5 bg-gray-800 rounded-lg transition">&larr; Previous</button>
+            <button @click="nextPage()" :disabled="!hasMore"
+                    :class="!hasMore ? 'opacity-30 cursor-not-allowed' : 'hover:bg-gray-700'"
+                    class="text-xs px-3 py-1.5 bg-gray-800 rounded-lg transition">Next &rarr;</button>
+          </div>
         </div>
       </div>
     </template>
@@ -1216,7 +1382,7 @@
     </template>
 
     <!-- Empty state (no view selected) -->
-    <template x-if="!['dashboard','project','task','flows','flow-editor','queue','agents','integrations'].includes($store.router.view)">
+    <template x-if="!['dashboard','project','task','flows','flow-editor','history','agents','integrations'].includes($store.router.view)">
       <div class="flex-1 flex items-center justify-center">
         <p class="text-gray-500 text-lg">Select a view from the sidebar</p>
       </div>

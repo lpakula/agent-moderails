@@ -437,6 +437,31 @@ async def global_queue():
         session.close()
 
 
+@app.get("/api/history")
+async def global_history(limit: int = 100, offset: int = 0):
+    """All TaskRuns globally, newest first. Includes completed, running, and queued."""
+    session, project_svc, task_svc = _get_services()
+    try:
+        from ..db.models import TaskRun
+        query = (
+            session.query(TaskRun)
+            .order_by(TaskRun.created_at.desc())
+        )
+        total = query.count()
+        runs = query.offset(offset).limit(limit).all()
+        result = []
+        for r in runs:
+            d = r.to_dict()
+            task = task_svc.get(r.task_id)
+            project = project_svc.get(r.project_id) if r.project_id else None
+            d["task_name"] = task.name if task else None
+            d["project_name"] = project.name if project else None
+            result.append(d)
+        return {"runs": result, "total": total}
+    finally:
+        session.close()
+
+
 @app.get("/api/projects/{project_id}/queue")
 async def project_queue(project_id: str):
     """All TaskRuns for project (pending + executing), ordered."""
