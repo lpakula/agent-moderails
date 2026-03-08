@@ -95,4 +95,4 @@ Each step's `content` is a markdown prompt with these sections:
 Study existing flows for patterns:
 - `moderails/defaults/flows.json` — `default` (simple 3-step) and `submit-pr` (single-step)
 - `moderails/flows/ripper-5.json` — full 7-step research-driven flow with artifact passing
-- `moderails/flows/react-js.json` — 3-step flow with visual testing via Playwright
+- `moderails/flows/react-js.json` — 4-step flow: execute, test dev server, take & verify screenshots, commit
