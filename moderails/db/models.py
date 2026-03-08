@@ -36,27 +36,48 @@ class Project(Base):
     default_model: str = Column(String(100), default="auto")
     default_agent: str = Column(String(50), default="cursor")
     default_flow_chain: str = Column(Text, default='["default"]')
+    aliases: str = Column(Text, default="{}")
     created_at: datetime = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     tasks = relationship("Task", back_populates="project", cascade="all, delete-orphan")
     integrations_rel = relationship("Integration", back_populates="project",
                                     cascade="all, delete-orphan")
 
-    def get_default_flow_chain(self) -> list[str]:
+    def _parse_flow_chain(self) -> list[str]:
         import json
         try:
             return json.loads(self.default_flow_chain or '["default"]')
         except (json.JSONDecodeError, TypeError):
             return ["default"]
 
+    def get_aliases(self) -> dict:
+        """Return all aliases, ensuring 'default' always exists.
+
+        Migrates from legacy default_model/default_agent/default_flow_chain
+        columns if 'default' is not yet present in the aliases dict.
+        """
+        import json
+        try:
+            result = json.loads(self.aliases or "{}")
+        except (json.JSONDecodeError, TypeError):
+            result = {}
+        if "default" not in result:
+            result["default"] = {
+                "agent": self.default_agent or "cursor",
+                "model": self.default_model or "auto",
+                "flow_chain": self._parse_flow_chain(),
+            }
+        return result
+
+    def get_alias(self, name: str) -> dict | None:
+        return self.get_aliases().get(name)
+
     def to_dict(self) -> dict:
         return {
             "id": self.id,
             "name": self.name,
             "path": self.path,
-            "default_model": self.default_model or "",
-            "default_agent": self.default_agent or "cursor",
-            "default_flow_chain": self.get_default_flow_chain(),
+            "aliases": self.get_aliases(),
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }
 

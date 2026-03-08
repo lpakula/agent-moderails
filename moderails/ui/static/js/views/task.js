@@ -20,6 +20,7 @@ function taskView() {
     runModalAgent: '',
     runModalAgents: [],
     runModalIsFirstRun: false,
+    runModalProject: null,
     logsCopied: false,
 
     async init() {
@@ -344,11 +345,14 @@ function taskView() {
       try {
         this.runModalAgents = await API.get('/api/agents');
         const project = this.task ? await API.get(`/api/projects/${this.task.project_id}`) : null;
-        this.runModalChain = [...(project?.default_flow_chain || ['default'])];
-        this.runModalAgent = this.runModalAgents.includes(project?.default_agent) ? project.default_agent : (this.runModalAgents[0] || 'cursor');
+        this.runModalProject = project;
+        const da = (project?.aliases || {})['default'] || { agent: 'cursor', model: 'auto', flow_chain: ['default'] };
+        this.runModalChain = [...(da.flow_chain || ['default'])];
+        this.runModalAgent = this.runModalAgents.includes(da.agent) ? da.agent : (this.runModalAgents[0] || 'cursor');
         await this.loadRunModalModels(this.runModalAgent);
-        this.runModalModel = project?.default_model || this.runModalModels[0] || '';
+        this.runModalModel = da.model || this.runModalModels[0] || '';
       } catch (e) {
+        this.runModalProject = null;
         this.runModalChain = [];
         this.runModalModel = '';
         this.runModalAgent = '';
@@ -383,6 +387,22 @@ function taskView() {
       });
       this.runModal = false;
       this.runs = await API.get(`/api/tasks/${this.task.id}/runs`);
+    },
+
+    sortedRunModalAliases() {
+      const aliases = this.runModalProject?.aliases || {};
+      const keys = Object.keys(aliases).sort((a, b) => (a === 'default' ? -1 : b === 'default' ? 1 : a.localeCompare(b)));
+      return keys.map(k => ({ name: k, ...aliases[k] }));
+    },
+
+    applyRunModalAlias(name) {
+      const cfg = (this.runModalProject?.aliases || {})[name];
+      if (!cfg) return;
+      if (cfg.agent && this.runModalAgents.includes(cfg.agent)) this.runModalAgent = cfg.agent;
+      if (cfg.flow_chain) this.runModalChain = [...cfg.flow_chain];
+      this.loadRunModalModels(this.runModalAgent).then(() => {
+        if (cfg.model && this.runModalModels.includes(cfg.model)) this.runModalModel = cfg.model;
+      });
     },
 
     back() {

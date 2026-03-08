@@ -3,7 +3,7 @@
 from pathlib import Path
 from typing import Optional
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.orm import Session, sessionmaker
 
 from ..config import SYSTEM_DB, ensure_system_dir
@@ -23,6 +23,14 @@ def init_db() -> Path:
     ensure_system_dir()
     engine = create_engine(f"sqlite:///{SYSTEM_DB}", echo=False)
     Base.metadata.create_all(engine)
+
+    inspector = inspect(engine)
+    if "projects" in inspector.get_table_names():
+        existing = {c["name"] for c in inspector.get_columns("projects")}
+        if "aliases" not in existing:
+            with engine.connect() as conn:
+                conn.execute(text("ALTER TABLE projects ADD COLUMN aliases TEXT DEFAULT '{}'"))
+                conn.commit()
 
     session = sessionmaker(bind=engine)()
     try:

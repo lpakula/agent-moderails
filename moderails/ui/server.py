@@ -162,9 +162,7 @@ async def get_project(project_id: str):
 
 class ProjectUpdate(BaseModel):
     name: Optional[str] = None
-    default_model: Optional[str] = None
-    default_agent: Optional[str] = None
-    default_flow_chain: Optional[list[str]] = None
+    aliases: Optional[dict] = None
 
 
 @app.patch("/api/projects/{project_id}")
@@ -177,12 +175,13 @@ async def update_project(project_id: str, body: ProjectUpdate):
         updates = {}
         if body.name is not None:
             updates["name"] = body.name
-        if body.default_model is not None:
-            updates["default_model"] = body.default_model
-        if body.default_agent is not None:
-            updates["default_agent"] = body.default_agent
-        if body.default_flow_chain is not None:
-            updates["default_flow_chain"] = json.dumps(body.default_flow_chain)
+        if body.aliases is not None:
+            aliases = body.aliases
+            if "default" not in aliases:
+                aliases["default"] = project.get_aliases().get("default", {
+                    "agent": "cursor", "model": "auto", "flow_chain": ["default"],
+                })
+            updates["aliases"] = json.dumps(aliases)
         if updates:
             project = project_svc.update(project_id, **updates)
         return project.to_dict()

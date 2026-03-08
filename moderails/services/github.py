@@ -80,14 +80,15 @@ class GitHubService:
         """Parse a @moderails trigger from a comment body.
 
         Returns None if no @moderails found.
-        Returns {"model": str|None, "flow_chain": list[str]|None, "agent": str|None}.
+        Returns {"model": str|None, "flow_chain": list[str]|None, "agent": str|None,
+                 "alias": str|None}.
         """
         match = re.search(r"@moderails\b(.*?)(?:\n|$)", body)
         if not match:
             return None
 
         args_str = match.group(1).strip()
-        result: dict = {"model": None, "flow_chain": None, "agent": None}
+        result: dict = {"model": None, "flow_chain": None, "agent": None, "alias": None}
         if not args_str:
             return result
 
@@ -102,6 +103,9 @@ class GitHubService:
                 i += 2
             elif parts[i] == "--agent" and i + 1 < len(parts):
                 result["agent"] = parts[i + 1]
+                i += 2
+            elif parts[i] == "--alias" and i + 1 < len(parts):
+                result["alias"] = parts[i + 1]
                 i += 2
             else:
                 i += 1
@@ -209,10 +213,21 @@ class GitHubService:
                 continue
             issue_number = int(issue_match.group(1))
 
-            # Resolve model, agent, and flow chain
-            model = mr_cmd["model"] or project.default_model
-            agent = mr_cmd["agent"] or project.default_agent or "cursor"
-            flow_chain = mr_cmd["flow_chain"] or project.get_default_flow_chain()
+            # Resolve alias (falls back to "default"), then explicit flags override
+            alias_name = mr_cmd.get("alias") or "default"
+            alias_config = project.get_alias(alias_name)
+            if not alias_config:
+                available = ", ".join(f"`{a}`" for a in project.get_aliases())
+                self.add_reaction(repo, comment_id, "eyes")
+                self.comment_on_issue(
+                    repo, issue_number,
+                    f"Unknown alias `{alias_name}`. Available aliases: {available}",
+                )
+                continue
+
+            model = mr_cmd["model"] or alias_config.get("model") or "auto"
+            agent = mr_cmd["agent"] or alias_config.get("agent") or "cursor"
+            flow_chain = mr_cmd["flow_chain"] or alias_config.get("flow_chain") or ["default"]
 
             # Validate agent
             if agent not in KNOWN_AGENTS:
