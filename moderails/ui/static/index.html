@@ -535,7 +535,31 @@
                   </span>
                 </div>
                 <p class="text-gray-500 text-xs font-mono mb-1" x-text="task.id"></p>
-                <p class="text-gray-400 text-sm" x-text="task.description || 'No description'"></p>
+                <div x-data="{ descExpanded: false }">
+                  <div class="relative">
+                    <div class="prose prose-invert max-w-none text-gray-400 text-sm leading-relaxed
+                                [&_h1]:text-base [&_h1]:font-bold [&_h1]:text-white [&_h1]:mt-3 [&_h1]:mb-1.5
+                                [&_h2]:text-sm [&_h2]:font-semibold [&_h2]:text-gray-100 [&_h2]:mt-2 [&_h2]:mb-1
+                                [&_h3]:text-xs [&_h3]:font-semibold [&_h3]:text-gray-200 [&_h3]:mt-2 [&_h3]:mb-1
+                                [&_p]:my-1 [&_p]:text-gray-400
+                                [&_ul]:my-1 [&_ul]:pl-4 [&_ul]:space-y-0.5
+                                [&_ol]:my-1 [&_ol]:pl-4 [&_ol]:space-y-0.5
+                                [&_li]:text-gray-400
+                                [&_code]:bg-gray-800 [&_code]:text-cyan-300 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-[11px] [&_code]:font-mono
+                                [&_pre]:bg-gray-800 [&_pre]:border [&_pre]:border-gray-700 [&_pre]:rounded-lg [&_pre]:p-3 [&_pre]:my-2 [&_pre]:overflow-x-auto
+                                [&_pre_code]:bg-transparent [&_pre_code]:text-green-300 [&_pre_code]:p-0 [&_pre_code]:text-[11px]
+                                [&_strong]:text-gray-200 [&_strong]:font-semibold
+                                [&_a]:text-blue-400 [&_a]:underline"
+                         :class="!descExpanded && 'line-clamp-3'"
+                         x-html="marked.parse(task.description || 'No description')"></div>
+                    <div x-show="!descExpanded && (task.description || '').length > 150"
+                         class="absolute bottom-0 left-0 right-0 h-6 bg-gradient-to-t from-gray-950 to-transparent pointer-events-none"></div>
+                  </div>
+                  <button x-show="(task.description || '').length > 150"
+                          @click="descExpanded = !descExpanded"
+                          class="text-xs text-blue-400 hover:text-blue-300 mt-1 hover:underline"
+                          x-text="descExpanded ? 'Show less' : 'Show more'"></button>
+                </div>
               </div>
             </div>
 
@@ -643,10 +667,31 @@
                       <template x-if="expandedRun === run.id">
                       <tr class="border-b border-gray-800/30">
                         <td colspan="7" class="px-4 py-4 bg-gray-950/50">
-                          <div x-show="run.user_prompt" class="mb-3">
+                          <div x-show="run.user_prompt" class="mb-3" x-data="{ promptExpanded: false }">
                             <div class="text-[10px] uppercase tracking-wide text-gray-600 mb-1">Prompt</div>
-                            <pre class="text-gray-300 text-xs whitespace-pre-wrap font-mono bg-gray-900 rounded-lg p-3 max-h-32 overflow-y-auto"
-                                 x-text="run.user_prompt"></pre>
+                            <div class="relative">
+                              <div class="prose prose-invert max-w-none text-gray-300 text-xs leading-relaxed bg-gray-900 rounded-lg p-3
+                                          [&_h1]:text-base [&_h1]:font-bold [&_h1]:text-white [&_h1]:mt-4 [&_h1]:mb-2
+                                          [&_h2]:text-sm [&_h2]:font-semibold [&_h2]:text-gray-100 [&_h2]:mt-3 [&_h2]:mb-1.5
+                                          [&_h3]:text-xs [&_h3]:font-semibold [&_h3]:text-gray-200 [&_h3]:mt-2.5 [&_h3]:mb-1
+                                          [&_p]:my-1.5 [&_p]:text-gray-300
+                                          [&_ul]:my-1.5 [&_ul]:pl-4 [&_ul]:space-y-0.5
+                                          [&_ol]:my-1.5 [&_ol]:pl-4 [&_ol]:space-y-0.5
+                                          [&_li]:text-gray-300
+                                          [&_code]:bg-gray-800 [&_code]:text-cyan-300 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-[11px] [&_code]:font-mono
+                                          [&_pre]:bg-gray-800 [&_pre]:border [&_pre]:border-gray-700 [&_pre]:rounded-lg [&_pre]:p-3 [&_pre]:my-2 [&_pre]:overflow-x-auto
+                                          [&_pre_code]:bg-transparent [&_pre_code]:text-green-300 [&_pre_code]:p-0 [&_pre_code]:text-[11px]
+                                          [&_strong]:text-gray-100 [&_strong]:font-semibold
+                                          [&_a]:text-blue-400 [&_a]:underline"
+                                   :class="promptExpanded ? 'max-h-96 overflow-y-auto' : 'max-h-20 overflow-hidden'"
+                                   x-html="marked.parse(run.user_prompt || '')"></div>
+                              <div x-show="!promptExpanded && (run.user_prompt || '').length > 200"
+                                   class="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-gray-900 to-transparent rounded-b-lg pointer-events-none"></div>
+                            </div>
+                            <button x-show="(run.user_prompt || '').length > 200"
+                                    @click="promptExpanded = !promptExpanded"
+                                    class="text-xs text-blue-400 hover:text-blue-300 mt-1 hover:underline"
+                                    x-text="promptExpanded ? 'Show less' : 'Show more'"></button>
                           </div>
                           <div x-show="run.summary" class="mb-3">
                             <div class="text-[10px] uppercase tracking-wide text-gray-600 mb-1">Summary</div>
@@ -1175,10 +1220,31 @@
                 <template x-if="expandedRun === run.id">
                   <tr class="border-b border-gray-800/30">
                     <td colspan="9" class="px-4 py-4 bg-gray-950/50">
-                      <div x-show="run.user_prompt" class="mb-3">
+                      <div x-show="run.user_prompt" class="mb-3" x-data="{ promptExpanded: false }">
                         <div class="text-[10px] uppercase tracking-wide text-gray-600 mb-1">Prompt</div>
-                        <pre class="text-gray-300 text-xs whitespace-pre-wrap font-mono bg-gray-900 rounded-lg p-3 max-h-32 overflow-y-auto"
-                             x-text="run.user_prompt"></pre>
+                        <div class="relative">
+                          <div class="prose prose-invert max-w-none text-gray-300 text-xs leading-relaxed bg-gray-900 rounded-lg p-3
+                                      [&_h1]:text-base [&_h1]:font-bold [&_h1]:text-white [&_h1]:mt-4 [&_h1]:mb-2
+                                      [&_h2]:text-sm [&_h2]:font-semibold [&_h2]:text-gray-100 [&_h2]:mt-3 [&_h2]:mb-1.5
+                                      [&_h3]:text-xs [&_h3]:font-semibold [&_h3]:text-gray-200 [&_h3]:mt-2.5 [&_h3]:mb-1
+                                      [&_p]:my-1.5 [&_p]:text-gray-300
+                                      [&_ul]:my-1.5 [&_ul]:pl-4 [&_ul]:space-y-0.5
+                                      [&_ol]:my-1.5 [&_ol]:pl-4 [&_ol]:space-y-0.5
+                                      [&_li]:text-gray-300
+                                      [&_code]:bg-gray-800 [&_code]:text-cyan-300 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-[11px] [&_code]:font-mono
+                                      [&_pre]:bg-gray-800 [&_pre]:border [&_pre]:border-gray-700 [&_pre]:rounded-lg [&_pre]:p-3 [&_pre]:my-2 [&_pre]:overflow-x-auto
+                                      [&_pre_code]:bg-transparent [&_pre_code]:text-green-300 [&_pre_code]:p-0 [&_pre_code]:text-[11px]
+                                      [&_strong]:text-gray-100 [&_strong]:font-semibold
+                                      [&_a]:text-blue-400 [&_a]:underline"
+                               :class="promptExpanded ? 'max-h-96 overflow-y-auto' : 'max-h-20 overflow-hidden'"
+                               x-html="marked.parse(run.user_prompt || '')"></div>
+                          <div x-show="!promptExpanded && (run.user_prompt || '').length > 200"
+                               class="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-gray-900 to-transparent rounded-b-lg pointer-events-none"></div>
+                        </div>
+                        <button x-show="(run.user_prompt || '').length > 200"
+                                @click="promptExpanded = !promptExpanded"
+                                class="text-xs text-blue-400 hover:text-blue-300 mt-1 hover:underline"
+                                x-text="promptExpanded ? 'Show less' : 'Show more'"></button>
                       </div>
                       <div x-show="run.summary" class="mb-3">
                         <div class="text-[10px] uppercase tracking-wide text-gray-600 mb-1">Summary</div>

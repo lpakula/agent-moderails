@@ -35,15 +35,20 @@ class WorktreeService:
         return self.worktrees_dir / _sanitize_branch(branch_name)
 
     def create(self, branch_name: str) -> tuple[bool, str]:
-        """Create a new worktree with a new branch.
+        """Create a new worktree with a new branch off the latest origin/main.
+
+        Fetches origin first so the worktree always starts from the newest
+        remote main, regardless of the local branch state.
 
         Returns (success, message).
         """
         wt_path = self._worktree_path_for(branch_name)
         self.worktrees_dir.mkdir(parents=True, exist_ok=True)
 
+        _run_git(["fetch", "origin", "main"], cwd=self.repo_path)
+
         code, stdout, stderr = _run_git(
-            ["worktree", "add", str(wt_path), "-b", branch_name],
+            ["worktree", "add", str(wt_path), "-b", branch_name, "origin/main"],
             cwd=self.repo_path,
         )
         if code == 0:

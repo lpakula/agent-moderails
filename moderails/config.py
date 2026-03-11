@@ -70,7 +70,7 @@ KNOWN_MODELS = list({m for reg in AGENT_REGISTRY.values() for m in reg["models"]
 DEFAULT_CONFIG = {
     "daemon": {
         "poll_interval_seconds": 30,
-        "run_timeout_minutes": 30,
+        "run_timeout_minutes": 60,
     },
     "ui": {
         "port": 4200,
